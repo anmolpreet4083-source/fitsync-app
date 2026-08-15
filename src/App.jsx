@@ -302,6 +302,8 @@ export default function FitSyncPrototype() {
   const [measurementForm, setMeasurementForm] = useState({ waist: "", hips: "", chest: "", arms: "" });
   const [photos, setPhotos] = useState([]);
   const [streak, setStreak] = useState(4);
+  const [workoutFeedback, setWorkoutFeedback] = useState(null);
+  const [measurementError, setMeasurementError] = useState("");
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hey! I'm your coach. I'll keep an eye on your trends and help you adjust your plan. Ask me anything, or tell me how today's going." },
   ]);
@@ -369,13 +371,25 @@ export default function FitSyncPrototype() {
 
   function logMeasurements() {
     const { waist, hips, chest, arms } = measurementForm;
-    if (!waist || !hips || !chest || !arms) return;
+    if (!waist || !hips || !chest || !arms) {
+      setMeasurementError("Fill in all four fields to log measurements.");
+      setTimeout(() => setMeasurementError(""), 3000);
+      return;
+    }
     setMeasurementLog((prev) => [
       ...prev,
       { label: `M${prev.length + 1}`, waist: Number(waist), hips: Number(hips), chest: Number(chest), arms: Number(arms) },
     ]);
     setMeasurementForm({ waist: "", hips: "", chest: "", arms: "" });
     setStreak((s) => s + 1);
+    setMeasurementError("saved");
+    setTimeout(() => setMeasurementError(""), 2000);
+  }
+
+  function startWorkout(name) {
+    setWorkoutDone(true);
+    setWorkoutFeedback(name);
+    setTimeout(() => setWorkoutFeedback(null), 2500);
   }
 
   function handlePhotoUpload(e) {
@@ -828,6 +842,13 @@ export default function FitSyncPrototype() {
             <>
               <ScreenHeader title="Workout" subtitle={`For your goal: ${profile.goal || "Not set"}`} />
 
+              {workoutFeedback && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(201,240,101,0.1)", border: `1px solid ${theme.lime}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
+                  <Check size={15} color={theme.lime} />
+                  <span style={{ fontSize: 12.5, color: theme.text }}>Started <strong>{workoutFeedback}</strong> — marked as today's workout.</span>
+                </div>
+              )}
+
               {profile.cycleAware && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
                   <Moon size={14} color={theme.sky} style={{ marginTop: 1, flexShrink: 0 }} />
@@ -892,7 +913,7 @@ export default function FitSyncPrototype() {
                 <>
                   <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.lime, textTransform: "uppercase", marginBottom: 8 }}>Recommended for you</div>
                   {recommended.map((w) => (
-                    <WorkoutCard key={w.id} w={w} recommended onStart={() => setWorkoutDone(true)} />
+                    <WorkoutCard key={w.id} w={w} recommended onStart={() => startWorkout(w.name)} />
                   ))}
                 </>
               )}
@@ -903,7 +924,7 @@ export default function FitSyncPrototype() {
               {rest.length === 0 && recommended.length === 0 ? (
                 <div style={{ fontSize: 12, color: theme.muted, padding: "10px 0" }}>No workouts match this filter.</div>
               ) : (
-                rest.map((w) => <WorkoutCard key={w.id} w={w} onStart={() => setWorkoutDone(true)} />)
+                rest.map((w) => <WorkoutCard key={w.id} w={w} onStart={() => startWorkout(w.name)} />)
               )}
             </>
           )}
@@ -1042,6 +1063,11 @@ export default function FitSyncPrototype() {
                 >
                   <Ruler size={13} /> Log measurements
                 </button>
+                {measurementError && (
+                  <div style={{ fontSize: 11, color: measurementError === "saved" ? theme.lime : theme.coral, marginTop: 8, textAlign: "center" }}>
+                    {measurementError === "saved" ? "✓ Measurements saved" : measurementError}
+                  </div>
+                )}
               </div>
 
               <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8, marginTop: 8 }}>Progress photos</div>
