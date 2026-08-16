@@ -27,6 +27,9 @@ import {
   Image,
   Filter,
   Moon,
+  Bell,
+  Zap,
+  Bot,
 } from "lucide-react";
 
 const theme = {
@@ -37,6 +40,8 @@ const theme = {
   lime: "#C9F065",
   coral: "#FF8B5E",
   sky: "#7EC8E3",
+  purple: "#B39DFF",
+  amber: "#FFC168",
   text: "#EDF3EE",
   muted: "#82998F",
 };
@@ -116,6 +121,13 @@ function inferMealFromTime() {
   if (hour < 15) return "Lunch";
   if (hour < 18) return "Snack";
   return "Dinner";
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 function getQuickAddFoods(log, limit = 4) {
@@ -623,7 +635,7 @@ export default function FitSyncPrototype() {
               <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: theme.text }}>LV{level}</span>
             </div>
             <button style={{ background: "none", border: "none", padding: 4 }}>
-              <Settings size={18} color={theme.muted} />
+              <Bell size={18} color={theme.muted} />
             </button>
           </div>
         </div>
@@ -632,143 +644,217 @@ export default function FitSyncPrototype() {
 
           {activeScreen === "home" && (
             <>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 8,
-                  background: theme.surface,
-                  border: `1px solid ${theme.border}`,
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  marginBottom: 18,
-                }}
-              >
-                <span style={{ position: "relative", top: 5, width: 6, height: 6, borderRadius: "50%", background: theme.lime, flexShrink: 0, boxShadow: `0 0 8px ${theme.lime}` }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    background: `linear-gradient(135deg, ${theme.lime}, ${theme.sky})`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Dumbbell size={22} color="#12211D" />
+                </div>
                 <div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, letterSpacing: 1.5, color: theme.lime, marginBottom: 2 }}>
-                    COACH
-                  </div>
-                  <div style={{ fontSize: 13, color: theme.text, lineHeight: 1.4 }}>{coachLine}</div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 20 }}>
-                <div style={{ position: "relative", width: 108, height: 108, flexShrink: 0 }}>
-                  <Ring percent={pctKcal} />
-                  <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, color: theme.text, fontWeight: 500 }}>
-                      {Math.round(kcalConsumed)}
+                  <div style={{ fontSize: 13, color: theme.muted }}>{getGreeting()},</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>
+                      {profile.goal ? "Athlete" : "there"}
                     </span>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: 9, color: theme.muted }}>/ {TARGETS.kcal} kcal</span>
+                    <span style={{ fontSize: 16 }}>👋</span>
                   </div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <MacroBar label="Protein" consumed={proteinConsumed} target={TARGETS.protein} color={theme.coral} />
-                  <MacroBar label="Carbs" consumed={carbsConsumed} target={TARGETS.carbs} color={theme.lime} />
-                  <MacroBar label="Fat" consumed={fatConsumed} target={TARGETS.fat} color={theme.sky} />
+                  <div style={{ fontSize: 11.5, color: theme.muted, marginTop: 1 }}>Keep pushing, you're doing great!</div>
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                <StatPill icon={<Droplet size={15} color={theme.sky} />} value="1.8" target="2.5L" label="Water" />
-                <StatPill icon={<Footprints size={15} color={theme.lime} />} value="7,420" target="10k" label="Steps" />
-                <StatPill icon={<Flame size={15} color={theme.coral} />} value="420" label="Burned" />
+              <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 600, color: theme.text }}>Today's Progress</span>
+                  <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: theme.lime, fontWeight: 500 }}>
+                    {Math.round(
+                      ((Math.min(kcalConsumed / TARGETS.kcal, 1) +
+                        Math.min(proteinConsumed / TARGETS.protein, 1) +
+                        Math.min(7420 / TARGETS.steps, 1) +
+                        Math.min(1.8 / TARGETS.water, 1)) /
+                        4) *
+                        100
+                    )}
+                    %
+                  </span>
+                </div>
+                <div style={{ height: 8, borderRadius: 5, background: theme.surfaceAlt, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      borderRadius: 5,
+                      background: `linear-gradient(90deg, ${theme.lime}, ${theme.sky})`,
+                      width: `${Math.round(
+                        ((Math.min(kcalConsumed / TARGETS.kcal, 1) +
+                          Math.min(proteinConsumed / TARGETS.protein, 1) +
+                          Math.min(7420 / TARGETS.steps, 1) +
+                          Math.min(1.8 / TARGETS.water, 1)) /
+                          4) *
+                          100
+                      )}%`,
+                      transition: "width 0.5s ease",
+                    }}
+                  />
+                </div>
               </div>
 
-              <button
-                onClick={() => setWorkoutDone((d) => !d)}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
+                {[
+                  { icon: Flame, color: theme.coral, label: "Calories", value: `${Math.round(kcalConsumed)}`, target: TARGETS.kcal },
+                  { icon: Zap, color: theme.amber, label: "Protein", value: `${Math.round(proteinConsumed)}`, target: `${TARGETS.protein}g` },
+                  { icon: Footprints, color: theme.lime, label: "Steps", value: "7,420", target: "10k" },
+                  { icon: Droplet, color: theme.sky, label: "Water", value: "1.8", target: "2.5L" },
+                ].map((s) => (
+                  <div
+                    key={s.label}
+                    style={{
+                      background: theme.surface,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: 12,
+                      padding: "10px 6px",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 3,
+                    }}
+                  >
+                    <s.icon size={16} color={s.color} />
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: theme.text, textAlign: "center" }}>
+                      {s.value}
+                      <span style={{ color: theme.muted, fontSize: 9 }}>/{s.target}</span>
+                    </span>
+                    <span style={{ fontSize: 8.5, color: theme.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 600, color: theme.text }}>Today's Plan</span>
+                  <button
+                    onClick={() => setActiveScreen("workout")}
+                    style={{ background: "none", border: "none", color: theme.lime, fontSize: 11.5, fontWeight: 600 }}
+                  >
+                    See all
+                  </button>
+                </div>
+
+                {[
+                  { icon: Dumbbell, title: "Upper Body", subtitle: "6 exercises · 42 min", done: workoutDone, onToggle: () => setWorkoutDone((d) => !d) },
+                  { icon: Footprints, title: "10,000 Steps", subtitle: "7,420 / 10,000", done: false, onToggle: null },
+                  { icon: Droplet, title: "Drink 2.5L Water", subtitle: "1.8 / 2.5 L", done: false, onToggle: null },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "9px 0",
+                      borderTop: i > 0 ? `1px solid ${theme.border}` : "none",
+                    }}
+                  >
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: theme.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <item.icon size={15} color={theme.sky} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12.5, color: theme.text, fontWeight: 500 }}>{item.title}</div>
+                      <div style={{ fontSize: 10.5, color: theme.muted }}>{item.subtitle}</div>
+                    </div>
+                    <button
+                      onClick={item.onToggle || undefined}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: "50%",
+                        border: `1.5px solid ${item.done ? theme.lime : theme.border}`,
+                        background: item.done ? theme.lime : "transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        cursor: item.onToggle ? "pointer" : "default",
+                      }}
+                    >
+                      {item.done && <Check size={13} color="#12211D" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: 12,
                   background: theme.surface,
                   border: `1px solid ${theme.border}`,
-                  borderRadius: 12,
-                  padding: "12px 14px",
-                  marginBottom: 22,
-                  width: "100%",
-                  textAlign: "left",
+                  borderRadius: 14,
+                  padding: "14px 16px",
+                  marginBottom: 14,
                 }}
               >
-                <div style={{ width: 34, height: 34, borderRadius: 8, background: theme.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Dumbbell size={16} color={theme.lime} />
-                </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, color: theme.text, fontWeight: 500 }}>Upper Body</div>
-                  <div style={{ fontSize: 11, color: theme.muted }}>6 exercises · 42 min</div>
+                  <div style={{ fontSize: 10.5, color: theme.purple, fontWeight: 600, letterSpacing: 0.5, marginBottom: 4 }}>YOUR GOAL</div>
+                  <div style={{ fontSize: 15, color: theme.text, fontWeight: 600, marginBottom: 3 }}>{profile.goal || "Not set"}</div>
+                  <div style={{ fontSize: 12, color: theme.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                    {weightHistory[0].value} kg <ChevronRight size={12} /> {weightHistory[weightHistory.length - 1].value} kg
+                  </div>
                 </div>
-                {workoutDone ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: theme.lime, fontSize: 11, fontFamily: "'IBM Plex Mono', monospace" }}>
-                    <Check size={13} /> DONE
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, color: theme.muted, fontSize: 11, fontFamily: "'IBM Plex Mono', monospace" }}>
-                    <Play size={13} /> START
-                  </div>
-                )}
-              </button>
-
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 600, color: theme.text }}>Today's log</span>
-                <button
-                  onClick={() => setShowAddFood(true)}
+                <div
                   style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: "rgba(179,157,255,0.15)",
                     display: "flex",
                     alignItems: "center",
-                    gap: 4,
-                    background: theme.lime,
-                    color: "#12211D",
-                    border: "none",
-                    borderRadius: 8,
-                    padding: "6px 10px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: 0.5,
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  <Plus size={13} /> LOG FOOD
-                </button>
+                  <Dumbbell size={20} color={theme.purple} />
+                </div>
               </div>
 
-              {MEALS.map((meal) => {
-                const entries = log.filter((e) => e.meal === meal);
-                if (entries.length === 0) return null;
-                return (
-                  <div key={meal} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>{meal}</div>
-                    {entries.map((e) => (
-                      <div
-                        key={e.logId}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "8px 10px",
-                          background: theme.surface,
-                          borderRadius: 10,
-                          marginBottom: 6,
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: 12.5, color: theme.text }}>
-                            {e.food.name} {e.qty > 1 ? `×${e.qty}` : ""}
-                          </div>
-                          <div style={{ fontSize: 10.5, color: theme.muted }}>{e.food.serving}</div>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: theme.text }}>
-                            {Math.round(e.food.kcal * e.qty)}
-                          </span>
-                          <button onClick={() => removeEntry(e.logId)} style={{ background: "none", border: "none", padding: 2 }}>
-                            <X size={13} color={theme.muted} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  background: theme.surface,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 14,
+                  padding: "14px 16px",
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10.5, color: theme.lime, fontWeight: 600, letterSpacing: 0.5, marginBottom: 4 }}>COACH ADVICE</div>
+                  <div style={{ fontSize: 12.5, color: theme.text, lineHeight: 1.4 }}>{coachLine}</div>
+                </div>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: "rgba(201,240,101,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Bot size={22} color={theme.lime} />
+                </div>
+              </div>
             </>
           )}
 
