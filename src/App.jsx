@@ -316,6 +316,12 @@ export default function FitSyncPrototype() {
   const [streak, setStreak] = useState(4);
   const [workoutFeedback, setWorkoutFeedback] = useState(null);
   const [measurementError, setMeasurementError] = useState("");
+  const [xpToast, setXpToast] = useState(null);
+
+  function showXp(amount) {
+    setXpToast(amount);
+    setTimeout(() => setXpToast(null), 1600);
+  }
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hey! I'm your coach. I'll keep an eye on your trends and help you adjust your plan. Ask me anything, or tell me how today's going." },
   ]);
@@ -342,6 +348,7 @@ export default function FitSyncPrototype() {
     setSelectedFood(null);
     setQty(1);
     setQuery("");
+    showXp(10);
   }
 
   function removeEntry(logId) {
@@ -352,6 +359,7 @@ export default function FitSyncPrototype() {
     setLog((prev) => [...prev, { logId: `${Date.now()}`, meal: targetMeal, food, qty: 1 }]);
     setJustAddedId(food.id);
     setTimeout(() => setJustAddedId(null), 900);
+    showXp(10);
   }
 
   const quickAddFoods = useMemo(() => getQuickAddFoods(log), [log]);
@@ -379,6 +387,7 @@ export default function FitSyncPrototype() {
     const next = Math.round((last.value - 0.1) * 10) / 10;
     setWeightHistory((prev) => [...prev, { label: `W${prev.length + 1}`, value: next }]);
     setStreak((s) => s + 1);
+    showXp(15);
   }
 
   function logMeasurements() {
@@ -396,12 +405,14 @@ export default function FitSyncPrototype() {
     setStreak((s) => s + 1);
     setMeasurementError("saved");
     setTimeout(() => setMeasurementError(""), 2000);
+    showXp(15);
   }
 
   function startWorkout(name) {
     setWorkoutDone(true);
     setWorkoutFeedback(name);
     setTimeout(() => setWorkoutFeedback(null), 2500);
+    showXp(30);
   }
 
   function handlePhotoUpload(e) {
@@ -455,6 +466,10 @@ export default function FitSyncPrototype() {
     { id: 4, name: "Goal Set", unlocked: !!profile.goal, icon: Target },
     { id: 5, name: "Consistency", unlocked: streak >= 3, icon: Check },
     { id: 6, name: "Progress Tracked", unlocked: measurementLog.length >= 2 || photos.length >= 1, icon: Ruler },
+    { id: 7, name: "Level 3", unlocked: level >= 3, icon: Award },
+    { id: 8, name: "30-Day Streak", unlocked: streak >= 30, icon: Sparkles },
+    { id: 9, name: "First Photo", unlocked: photos.length >= 1, icon: Image },
+    { id: 10, name: "Recovery Fan", unlocked: workoutTypeFilter === "Recovery", icon: Leaf },
   ];
 
   const challenges = [
@@ -670,6 +685,47 @@ export default function FitSyncPrototype() {
                   <div style={{ fontSize: 11.5, color: theme.muted, marginTop: 1 }}>Keep pushing, you're doing great!</div>
                 </div>
               </div>
+
+              <button
+                onClick={() => setActiveScreen("progress")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  width: "100%",
+                  background: theme.surface,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 14,
+                  padding: "12px 14px",
+                  marginBottom: 14,
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "center" }}>
+                    <Flame size={14} color={theme.coral} />
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: theme.text }}>{streak}</span>
+                  </div>
+                  <div style={{ fontSize: 8.5, color: theme.muted, textTransform: "uppercase" }}>Streak</div>
+                </div>
+                <div style={{ width: 1, height: 28, background: theme.border }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                    <span style={{ fontSize: 11, color: theme.text }}>Level {level}</span>
+                    <span style={{ fontSize: 9, color: theme.muted }}>{xpIntoLevel}/150 XP</span>
+                  </div>
+                  <div style={{ height: 5, borderRadius: 3, background: theme.surfaceAlt, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${(xpIntoLevel / 150) * 100}%`, background: theme.lime, borderRadius: 3 }} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {badges.filter((b) => b.unlocked).slice(0, 3).map((b) => (
+                    <div key={b.id} style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(201,240,101,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <b.icon size={12} color={theme.lime} />
+                    </div>
+                  ))}
+                </div>
+              </button>
 
               <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -1269,6 +1325,29 @@ export default function FitSyncPrototype() {
             );
           })}
         </div>
+
+        {xpToast && (
+          <div
+            style={{
+              position: "absolute",
+              top: 70,
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: theme.lime,
+              color: "#12211D",
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: 13,
+              fontWeight: 600,
+              padding: "6px 14px",
+              borderRadius: 20,
+              boxShadow: "0 6px 16px rgba(0,0,0,0.4)",
+              zIndex: 20,
+              animation: "none",
+            }}
+          >
+            +{xpToast} XP
+          </div>
+        )}
 
         {showAddFood && (
           <div
