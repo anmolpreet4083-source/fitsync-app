@@ -888,7 +888,7 @@ export default function FitSyncPrototype() {
                 </div>
               )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, overflowX: "auto" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
                 <Filter size={13} color={theme.muted} style={{ flexShrink: 0 }} />
                 {WORKOUT_TYPES.map((t) => (
                   <button
