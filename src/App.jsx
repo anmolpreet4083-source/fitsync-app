@@ -74,7 +74,7 @@ const initialLog = [
 
 const TARGETS = { kcal: 2200, protein: 120, carbs: 250, fat: 70, water: 2.5, steps: 10000 };
 
-const GOALS = ["Lose Fat", "Build Muscle", "Gain Weight", "Get Stronger", "General Fitness"];
+const GOALS = ["Lose Fat", "Build Muscle", "Gain Weight", "Tone & Sculpt", "Get Stronger", "General Fitness"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced"];
 const EQUIPMENT_OPTIONS = ["Full Gym", "Home - Dumbbells", "Bodyweight Only"];
 const WORKOUT_TYPES = ["All", "Strength", "Cardio", "Mobility", "Recovery"];
@@ -90,6 +90,8 @@ const WORKOUT_LIBRARY = [
   { id: 8, name: "Full Body Gain Circuit", type: "Strength", exercises: 6, duration: 35, difficulty: "Intermediate", equipment: "Home - Dumbbells", goal: "Gain Weight" },
   { id: 9, name: "Deep Stretch & Mobility", type: "Recovery", exercises: 6, duration: 18, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness" },
   { id: 10, name: "Post-Leg-Day Recovery", type: "Recovery", exercises: 5, duration: 12, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness" },
+  { id: 11, name: "Sculpt & Tone Circuit", type: "Strength", exercises: 6, duration: 30, difficulty: "Beginner", equipment: "Home - Dumbbells", goal: "Tone & Sculpt" },
+  { id: 12, name: "Glute & Core Tone", type: "Strength", exercises: 5, duration: 25, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "Tone & Sculpt" },
 ];
 
 const WEIGHT_HISTORY = [
@@ -295,7 +297,7 @@ function WorkoutCard({ w, onStart, recommended }) {
 export default function FitSyncPrototype() {
   const [onboarded, setOnboarded] = useState(false);
   const [onboardStep, setOnboardStep] = useState(1);
-  const [profile, setProfile] = useState({ goal: null, experience: null, equipment: null, cycleAware: false });
+  const [profile, setProfile] = useState({ goal: null, experience: null, equipment: null, cycleAware: false, cycleStartDate: "", cycleLength: 28 });
 
   const [activeScreen, setActiveScreen] = useState("home");
   const [log, setLog] = useState(initialLog);
@@ -334,8 +336,22 @@ export default function FitSyncPrototype() {
   const remaining = Math.max(TARGETS.kcal - kcalConsumed, 0);
   const pctKcal = (kcalConsumed / TARGETS.kcal) * 100;
 
-  const cycleDay = useMemo(() => (new Date().getDate() % 28) + 1, []);
-  const cycleLighterPhase = cycleDay <= 5;
+  const cycleDay = useMemo(() => {
+    if (!profile.cycleStartDate) return (new Date().getDate() % 28) + 1;
+    const start = new Date(profile.cycleStartDate);
+    const today = new Date();
+    const diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+    const length = profile.cycleLength || 28;
+    return ((diffDays % length) + length) % length + 1;
+  }, [profile.cycleStartDate, profile.cycleLength]);
+
+  const cyclePhase = useMemo(() => {
+    if (cycleDay <= 5) return { name: "Menstrual", advice: "Lighter movement or full rest both make sense today — go with what your body wants.", tip: "Iron-rich foods (leafy greens, lentils, lean meat) can help support energy this week." };
+    if (cycleDay <= 13) return { name: "Follicular", advice: "Energy typically rises through this phase — a solid window to push strength progression.", tip: "Good phase to try a slightly heavier set or a new PR if you're feeling strong." };
+    if (cycleDay <= 16) return { name: "Ovulation", advice: "Often the highest-energy window in the cycle — great day for higher intensity if you feel good.", tip: "Stay on top of hydration; some people notice higher body temperature around this phase." };
+    return { name: "Luteal", advice: "Energy can dip, especially later in this phase — moderate intensity and prioritizing recovery both help.", tip: "Extra sleep and magnesium-rich foods (nuts, seeds, dark chocolate) are commonly reported as helpful here." };
+  }, [cycleDay]);
+  const cycleLighterPhase = cyclePhase.name === "Menstrual" || cyclePhase.name === "Luteal";
 
   const filteredFoods = useMemo(() => {
     if (!query.trim()) return FOOD_DB;
@@ -438,7 +454,7 @@ export default function FitSyncPrototype() {
       } else if (lower.includes("weight") || lower.includes("progress")) {
         reply = "Your weight trend over the last few weeks looks steady. Check the Progress tab for the full chart.";
       } else if (lower.includes("cycle") && profile.cycleAware) {
-        reply = `You're around day ${cycleDay} of your tracked cycle. I'd suggest ${cycleLighterPhase ? "keeping today lighter — recovery or mobility work suits this phase" : "training at your normal intensity"}.`;
+        reply = `You're on day ${cycleDay} — the ${cyclePhase.name} phase. ${cyclePhase.advice} ${cyclePhase.tip}`;
       } else if (lower.includes("streak") || lower.includes("badge") || lower.includes("level")) {
         reply = "Check the Progress tab — your streak, level, and badges are all there.";
       }
@@ -569,6 +585,28 @@ export default function FitSyncPrototype() {
                   <div style={{ width: 16, height: 16, borderRadius: "50%", background: theme.bg, position: "absolute", top: 3, left: profile.cycleAware ? 21 : 3, transition: "left 0.2s ease" }} />
                 </div>
               </button>
+
+              {profile.cycleAware && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, color: theme.muted, marginBottom: 6 }}>First day of your last period</div>
+                  <input
+                    type="date"
+                    value={profile.cycleStartDate}
+                    onChange={(e) => setProfile((p) => ({ ...p, cycleStartDate: e.target.value }))}
+                    style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px 12px", color: theme.text, fontSize: 13, marginBottom: 12, outline: "none" }}
+                  />
+                  <div style={{ fontSize: 11, color: theme.muted, marginBottom: 6 }}>Typical cycle length (days)</div>
+                  <input
+                    type="number"
+                    value={profile.cycleLength}
+                    onChange={(e) => setProfile((p) => ({ ...p, cycleLength: Number(e.target.value) || 28 }))}
+                    style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px 12px", color: theme.text, fontSize: 13, outline: "none" }}
+                  />
+                  <div style={{ fontSize: 10, color: theme.muted, marginTop: 8, lineHeight: 1.4 }}>
+                    This is optional and just for general training guidance — not medical tracking. Skip the date and we'll leave this off for now.
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -994,8 +1032,12 @@ export default function FitSyncPrototype() {
               {profile.cycleAware && (
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
                   <Moon size={14} color={theme.sky} style={{ marginTop: 1, flexShrink: 0 }} />
-                  <div style={{ fontSize: 12, color: theme.text, lineHeight: 1.4 }}>
-                    Day {cycleDay} of your tracked cycle — {cycleLighterPhase ? "today's a good day for lighter intensity or recovery work." : "you're clear for normal training intensity."}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: theme.text, fontWeight: 600, marginBottom: 2 }}>
+                      Day {cycleDay} · {cyclePhase.name} phase
+                    </div>
+                    <div style={{ fontSize: 11.5, color: theme.muted, lineHeight: 1.4, marginBottom: 4 }}>{cyclePhase.advice}</div>
+                    <div style={{ fontSize: 10.5, color: theme.sky, lineHeight: 1.4 }}>{cyclePhase.tip}</div>
                   </div>
                 </div>
               )}
