@@ -80,18 +80,136 @@ const EQUIPMENT_OPTIONS = ["Full Gym", "Home - Dumbbells", "Bodyweight Only"];
 const WORKOUT_TYPES = ["All", "Strength", "Cardio", "Mobility", "Recovery"];
 
 const WORKOUT_LIBRARY = [
-  { id: 1, name: "Upper Body Strength", type: "Strength", exercises: 6, duration: 42, difficulty: "Intermediate", equipment: "Full Gym", goal: "Build Muscle" },
-  { id: 2, name: "Lower Body Power", type: "Strength", exercises: 5, duration: 38, difficulty: "Intermediate", equipment: "Full Gym", goal: "Get Stronger" },
-  { id: 3, name: "Full Body HIIT", type: "Cardio", exercises: 8, duration: 25, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "Lose Fat" },
-  { id: 4, name: "Core & Mobility", type: "Mobility", exercises: 6, duration: 20, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness" },
-  { id: 5, name: "Home Dumbbell Push", type: "Strength", exercises: 5, duration: 30, difficulty: "Beginner", equipment: "Home - Dumbbells", goal: "Build Muscle" },
-  { id: 6, name: "Advanced Powerlifting Split", type: "Strength", exercises: 4, duration: 50, difficulty: "Advanced", equipment: "Full Gym", goal: "Get Stronger" },
-  { id: 7, name: "Recovery Stretch Flow", type: "Recovery", exercises: 8, duration: 15, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness" },
-  { id: 8, name: "Full Body Gain Circuit", type: "Strength", exercises: 6, duration: 35, difficulty: "Intermediate", equipment: "Home - Dumbbells", goal: "Gain Weight" },
-  { id: 9, name: "Deep Stretch & Mobility", type: "Recovery", exercises: 6, duration: 18, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness" },
-  { id: 10, name: "Post-Leg-Day Recovery", type: "Recovery", exercises: 5, duration: 12, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness" },
-  { id: 11, name: "Sculpt & Tone Circuit", type: "Strength", exercises: 6, duration: 30, difficulty: "Beginner", equipment: "Home - Dumbbells", goal: "Tone & Sculpt" },
-  { id: 12, name: "Glute & Core Tone", type: "Strength", exercises: 5, duration: 25, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "Tone & Sculpt" },
+  {
+    id: 1, name: "Upper Body Strength", type: "Strength", exercises: 6, duration: 42, difficulty: "Intermediate", equipment: "Full Gym", goal: "Build Muscle",
+    exerciseList: [
+      { name: "Lat Pulldown", detail: "3 sets x 10 reps", tip: "Sit tall, pull the bar to your upper chest, squeeze your back, control the return." },
+      { name: "Chest Press", detail: "3 sets x 10 reps", tip: "Press the handles forward until arms extend, avoid locking your elbows." },
+      { name: "Seated Row", detail: "3 sets x 12 reps", tip: "Pull handles to your torso, squeeze your shoulder blades together." },
+      { name: "Shoulder Press", detail: "3 sets x 10 reps", tip: "Press overhead until arms are extended, avoid arching your lower back." },
+      { name: "Biceps Curl", detail: "3 sets x 12 reps", tip: "Curl the weight up without swinging your torso." },
+      { name: "Triceps Pushdown", detail: "3 sets x 12 reps", tip: "Push the bar down until arms are straight, keep elbows tucked in." },
+    ],
+  },
+  {
+    id: 2, name: "Lower Body Power", type: "Strength", exercises: 5, duration: 38, difficulty: "Intermediate", equipment: "Full Gym", goal: "Get Stronger",
+    exerciseList: [
+      { name: "Barbell Squat", detail: "4 sets x 8 reps", tip: "Feet shoulder-width apart, sit back and down, keep your chest up." },
+      { name: "Romanian Deadlift", detail: "3 sets x 10 reps", tip: "Hinge at the hips, keep your back flat, lower the bar along your legs." },
+      { name: "Leg Press", detail: "3 sets x 12 reps", tip: "Push through your heels, avoid locking your knees at the top." },
+      { name: "Walking Lunges", detail: "3 sets x 12 each leg", tip: "Step forward, lower until both knees are near 90°, push back up." },
+      { name: "Calf Raise", detail: "3 sets x 15 reps", tip: "Rise onto your toes, pause, then lower slowly." },
+    ],
+  },
+  {
+    id: 3, name: "Full Body HIIT", type: "Cardio", exercises: 8, duration: 25, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "Lose Fat",
+    exerciseList: [
+      { name: "Jumping Jacks", detail: "45 seconds", tip: "Keep a steady rhythm and land softly." },
+      { name: "Bodyweight Squats", detail: "45 seconds", tip: "Full range of motion, keep your chest up." },
+      { name: "Mountain Climbers", detail: "45 seconds", tip: "Keep your hips low, drive your knees in quickly." },
+      { name: "Push-ups", detail: "45 seconds", tip: "Modify on your knees if needed, keep your core tight." },
+      { name: "Burpees", detail: "45 seconds", tip: "Move at your own pace, prioritize form over speed." },
+      { name: "High Knees", detail: "45 seconds", tip: "Pump your arms, land softly on the balls of your feet." },
+      { name: "Plank Hold", detail: "45 seconds", tip: "Keep your body in a straight line, engage your core." },
+      { name: "Cooldown Walk", detail: "60 seconds", tip: "Walk it out and focus on breathing deeply." },
+    ],
+  },
+  {
+    id: 4, name: "Core & Mobility", type: "Mobility", exercises: 6, duration: 20, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness",
+    exerciseList: [
+      { name: "Cat-Cow Stretch", detail: "10 reps", tip: "Alternate arching and rounding your spine slowly." },
+      { name: "Bird Dog", detail: "3 sets x 10 each side", tip: "Extend opposite arm and leg, keep your hips level." },
+      { name: "Dead Bug", detail: "3 sets x 12 reps", tip: "Lower the opposite arm and leg without arching your lower back." },
+      { name: "Plank", detail: "3 sets x 30 seconds", tip: "Keep a straight line from head to heels." },
+      { name: "Hip Flexor Stretch", detail: "30 seconds each side", tip: "From a lunge position, gently push your hips forward." },
+      { name: "World's Greatest Stretch", detail: "5 reps each side", tip: "Lunge, rotate your torso, and reach up toward the ceiling." },
+    ],
+  },
+  {
+    id: 5, name: "Home Dumbbell Push", type: "Strength", exercises: 5, duration: 30, difficulty: "Beginner", equipment: "Home - Dumbbells", goal: "Build Muscle",
+    exerciseList: [
+      { name: "Dumbbell Bench Press", detail: "3 sets x 10 reps", tip: "Lower the weights to chest level, press up evenly on both sides." },
+      { name: "Dumbbell Shoulder Press", detail: "3 sets x 10 reps", tip: "Press overhead, avoid arching your lower back." },
+      { name: "Incline Push-ups", detail: "3 sets x 12 reps", tip: "Hands on a stable elevated surface, keep your core tight." },
+      { name: "Lateral Raise", detail: "3 sets x 12 reps", tip: "Raise your arms to shoulder height with a slight bend in the elbows." },
+      { name: "Triceps Kickback", detail: "3 sets x 12 reps", tip: "Hinge forward, extend your arm back, squeeze your triceps." },
+    ],
+  },
+  {
+    id: 6, name: "Advanced Powerlifting Split", type: "Strength", exercises: 4, duration: 50, difficulty: "Advanced", equipment: "Full Gym", goal: "Get Stronger",
+    exerciseList: [
+      { name: "Barbell Back Squat", detail: "5 sets x 5 reps", tip: "Heavy compound lift — brace your core, controlled descent." },
+      { name: "Barbell Bench Press", detail: "5 sets x 5 reps", tip: "Retract your shoulder blades, keep a controlled bar path." },
+      { name: "Deadlift", detail: "3 sets x 5 reps", tip: "Neutral spine, drive through your heels, hips and shoulders rise together." },
+      { name: "Overhead Press", detail: "4 sets x 6 reps", tip: "Brace your core and press straight overhead." },
+    ],
+  },
+  {
+    id: 7, name: "Recovery Stretch Flow", type: "Recovery", exercises: 8, duration: 15, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness",
+    exerciseList: [
+      { name: "Child's Pose", detail: "60 seconds", tip: "Sit back onto your heels, reach arms forward, breathe deeply." },
+      { name: "Seated Forward Fold", detail: "45 seconds", tip: "Hinge from your hips, reach toward your toes, relax your neck." },
+      { name: "Figure-4 Stretch", detail: "45 seconds each side", tip: "Cross ankle over knee, gently pull your leg toward your chest." },
+      { name: "Thread the Needle", detail: "45 seconds each side", tip: "On all fours, thread one arm under the other and rotate." },
+      { name: "Standing Quad Stretch", detail: "30 seconds each side", tip: "Pull your heel toward your glutes, keep knees together." },
+      { name: "Deep Breathing", detail: "90 seconds", tip: "Slow inhales and exhales, relax your shoulders." },
+      { name: "Neck Rolls", detail: "30 seconds", tip: "Gentle circles, avoid forcing the range of motion." },
+      { name: "Shoulder Rolls", detail: "30 seconds", tip: "Roll your shoulders back and down slowly." },
+    ],
+  },
+  {
+    id: 8, name: "Full Body Gain Circuit", type: "Strength", exercises: 6, duration: 35, difficulty: "Intermediate", equipment: "Home - Dumbbells", goal: "Gain Weight",
+    exerciseList: [
+      { name: "Goblet Squat", detail: "4 sets x 10 reps", tip: "Hold the dumbbell at chest height, squat with control." },
+      { name: "Dumbbell Romanian Deadlift", detail: "3 sets x 10 reps", tip: "Hinge at the hips, keep dumbbells close to your legs." },
+      { name: "Push-ups", detail: "3 sets to near-failure", tip: "Full range of motion, keep your core tight." },
+      { name: "Bent-over Row", detail: "3 sets x 10 reps", tip: "Hinge forward, pull the dumbbells to your hips." },
+      { name: "Overhead Press", detail: "3 sets x 10 reps", tip: "Press the dumbbells overhead with control." },
+      { name: "Plank", detail: "3 sets x 40 seconds", tip: "Straight body line, engage your core throughout." },
+    ],
+  },
+  {
+    id: 9, name: "Deep Stretch & Mobility", type: "Recovery", exercises: 6, duration: 18, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness",
+    exerciseList: [
+      { name: "Downward Dog", detail: "45 seconds", tip: "Push your hips up and back, heels reaching toward the floor." },
+      { name: "Pigeon Pose", detail: "45 seconds each side", tip: "Deep hip opener — keep your hips as square as possible." },
+      { name: "Cobra Stretch", detail: "30 seconds", tip: "Gently press your chest up, keep your shoulders relaxed." },
+      { name: "Butterfly Stretch", detail: "45 seconds", tip: "Soles of your feet together, gently press your knees down." },
+      { name: "Spinal Twist", detail: "30 seconds each side", tip: "Lying down, drop your knees to one side and look the other way." },
+      { name: "Deep Breathing", detail: "60 seconds", tip: "Slow, controlled breaths to finish the session calmly." },
+    ],
+  },
+  {
+    id: 10, name: "Post-Leg-Day Recovery", type: "Recovery", exercises: 5, duration: 12, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness",
+    exerciseList: [
+      { name: "Foam Roll Quads", detail: "60 seconds", tip: "Slow rolls, pause briefly on any tender spots." },
+      { name: "Standing Calf Stretch", detail: "30 seconds each side", tip: "Lean into a wall, keep your back heel down." },
+      { name: "Seated Hamstring Stretch", detail: "45 seconds each side", tip: "Reach toward your toes, keep your back flat." },
+      { name: "Glute Bridge Hold", detail: "45 seconds", tip: "Squeeze your glutes at the top, hips lifted." },
+      { name: "Walking Recovery", detail: "3 minutes", tip: "Easy pace, focus on breathing and letting your legs loosen up." },
+    ],
+  },
+  {
+    id: 11, name: "Sculpt & Tone Circuit", type: "Strength", exercises: 6, duration: 30, difficulty: "Beginner", equipment: "Home - Dumbbells", goal: "Tone & Sculpt",
+    exerciseList: [
+      { name: "Dumbbell Squat to Press", detail: "3 sets x 12 reps", tip: "Squat down, press the dumbbells overhead as you stand." },
+      { name: "Renegade Row", detail: "3 sets x 10 each side", tip: "Plank position, row one dumbbell at a time without twisting your hips." },
+      { name: "Sumo Squat", detail: "3 sets x 15 reps", tip: "Wide stance, toes turned out, squat with control." },
+      { name: "Lateral Lunge", detail: "3 sets x 10 each side", tip: "Step wide to the side, sit back into the hip you're loading." },
+      { name: "Triceps Dips", detail: "3 sets x 12 reps", tip: "Use a bench or sturdy chair, lower with control." },
+      { name: "Standing Side Crunch", detail: "3 sets x 15 each side", tip: "Bring your elbow and knee together, engage your obliques." },
+    ],
+  },
+  {
+    id: 12, name: "Glute & Core Tone", type: "Strength", exercises: 5, duration: 25, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "Tone & Sculpt",
+    exerciseList: [
+      { name: "Glute Bridge", detail: "3 sets x 15 reps", tip: "Squeeze your glutes at the top, avoid overarching your back." },
+      { name: "Fire Hydrants", detail: "3 sets x 12 each side", tip: "On all fours, lift your leg out to the side with control." },
+      { name: "Donkey Kicks", detail: "3 sets x 12 each side", tip: "Kick your heel toward the ceiling, squeeze your glute at the top." },
+      { name: "Bicycle Crunches", detail: "3 sets x 20 reps", tip: "Controlled twist, avoid pulling on your neck." },
+      { name: "Side Plank", detail: "3 sets x 30 seconds each side", tip: "Stack your hips, keep your body in a straight line." },
+    ],
+  },
 ];
 
 const WEIGHT_HISTORY = [
@@ -319,6 +437,7 @@ export default function FitSyncPrototype() {
   const [workoutFeedback, setWorkoutFeedback] = useState(null);
   const [measurementError, setMeasurementError] = useState("");
   const [xpToast, setXpToast] = useState(null);
+  const [activeSession, setActiveSession] = useState(null);
 
   function showXp(amount) {
     setXpToast(amount);
@@ -429,6 +548,32 @@ export default function FitSyncPrototype() {
     setWorkoutFeedback(name);
     setTimeout(() => setWorkoutFeedback(null), 2500);
     showXp(30);
+  }
+
+  function openSession(workout) {
+    const list = workout.exerciseList || (workout.exercises && Array.isArray(workout.exercises) ? workout.exercises.map((e) => ({ name: e, detail: "", tip: "Focus on slow, controlled form." })) : []);
+    setActiveSession({ workout, list, index: 0 });
+  }
+
+  function nextExercise() {
+    setActiveSession((s) => {
+      if (!s) return s;
+      if (s.index < s.list.length - 1) return { ...s, index: s.index + 1 };
+      return s;
+    });
+  }
+
+  function prevExercise() {
+    setActiveSession((s) => (s && s.index > 0 ? { ...s, index: s.index - 1 } : s));
+  }
+
+  function finishSession() {
+    if (!activeSession) return;
+    setWorkoutDone(true);
+    setWorkoutFeedback(activeSession.workout.name);
+    setTimeout(() => setWorkoutFeedback(null), 2500);
+    showXp(30);
+    setActiveSession(null);
   }
 
   function handlePhotoUpload(e) {
@@ -1068,7 +1213,13 @@ export default function FitSyncPrototype() {
                   {generatedWorkout.exercises.map((ex, i) => (
                     <div key={i} style={{ fontSize: 12, color: theme.muted, marginBottom: 4 }}>{ex}</div>
                   ))}
-                  <div style={{ fontSize: 10, color: theme.muted, marginTop: 8, fontStyle: "italic" }}>Demo output — real AI generation comes next.</div>
+                  <div style={{ fontSize: 10, color: theme.muted, marginTop: 8, marginBottom: 10, fontStyle: "italic" }}>Demo output — real AI generation comes next.</div>
+                  <button
+                    onClick={() => openSession(generatedWorkout)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "9px 0", fontSize: 12, fontWeight: 600 }}
+                  >
+                    <Play size={12} /> Start this workout
+                  </button>
                 </div>
               )}
 
@@ -1097,7 +1248,7 @@ export default function FitSyncPrototype() {
                 <>
                   <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.lime, textTransform: "uppercase", marginBottom: 8 }}>Recommended for you</div>
                   {recommended.map((w) => (
-                    <WorkoutCard key={w.id} w={w} recommended onStart={() => startWorkout(w.name)} />
+                    <WorkoutCard key={w.id} w={w} recommended onStart={() => openSession(w)} />
                   ))}
                 </>
               )}
@@ -1108,7 +1259,7 @@ export default function FitSyncPrototype() {
               {rest.length === 0 && recommended.length === 0 ? (
                 <div style={{ fontSize: 12, color: theme.muted, padding: "10px 0" }}>No workouts match this filter.</div>
               ) : (
-                rest.map((w) => <WorkoutCard key={w.id} w={w} onStart={() => startWorkout(w.name)} />)
+                rest.map((w) => <WorkoutCard key={w.id} w={w} onStart={() => openSession(w)} />)
               )}
             </>
           )}
@@ -1367,6 +1518,86 @@ export default function FitSyncPrototype() {
             );
           })}
         </div>
+
+        {activeSession && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: theme.bg,
+              zIndex: 30,
+              display: "flex",
+              flexDirection: "column",
+              padding: "20px 22px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <button onClick={() => setActiveSession(null)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+              <span style={{ fontSize: 11, color: theme.muted, fontFamily: "'IBM Plex Mono', monospace" }}>
+                {activeSession.index + 1} / {activeSession.list.length}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: theme.muted, marginBottom: 20 }}>{activeSession.workout.name}</div>
+
+            <div style={{ height: 4, borderRadius: 3, background: theme.surfaceAlt, overflow: "hidden", marginBottom: 30 }}>
+              <div
+                style={{
+                  height: "100%",
+                  borderRadius: 3,
+                  background: theme.lime,
+                  width: `${((activeSession.index + 1) / activeSession.list.length) * 100}%`,
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <div style={{ width: 64, height: 64, borderRadius: 16, background: theme.surface, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+                <Dumbbell size={28} color={theme.lime} />
+              </div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: theme.text, marginBottom: 10, lineHeight: 1.2 }}>
+                {activeSession.list[activeSession.index].name}
+              </div>
+              {activeSession.list[activeSession.index].detail && (
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: theme.lime, marginBottom: 20 }}>
+                  {activeSession.list[activeSession.index].detail}
+                </div>
+              )}
+              <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px 16px" }}>
+                <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>How to do it</div>
+                <div style={{ fontSize: 13, color: theme.text, lineHeight: 1.5 }}>{activeSession.list[activeSession.index].tip}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              {activeSession.index > 0 && (
+                <button
+                  onClick={prevExercise}
+                  style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, fontSize: 14 }}
+                >
+                  Back
+                </button>
+              )}
+              {activeSession.index < activeSession.list.length - 1 ? (
+                <button
+                  onClick={nextExercise}
+                  style={{ flex: 2, padding: "14px 0", borderRadius: 12, border: "none", background: theme.lime, color: "#12211D", fontSize: 14, fontWeight: 600 }}
+                >
+                  Next exercise
+                </button>
+              ) : (
+                <button
+                  onClick={finishSession}
+                  style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "14px 0", borderRadius: 12, border: "none", background: theme.lime, color: "#12211D", fontSize: 14, fontWeight: 600 }}
+                >
+                  <Check size={16} /> Finish workout
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {xpToast && (
           <div
