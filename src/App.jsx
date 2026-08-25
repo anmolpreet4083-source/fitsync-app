@@ -30,6 +30,8 @@ import {
   Bell,
   Zap,
   Bot,
+  Globe,
+  ChefHat,
 } from "lucide-react";
 
 const theme = {
@@ -46,17 +48,47 @@ const theme = {
   muted: "#82998F",
 };
 
+const CUISINES = ["Indian", "Mexican", "Japanese", "Italian", "Thai", "Middle Eastern", "Chinese", "American", "Mediterranean", "Caribbean", "African", "Filipino"];
+
 const FOOD_DB = [
-  { id: 1, name: "Grilled chicken breast", serving: "150g", kcal: 248, protein: 46, carbs: 0, fat: 5.4 },
-  { id: 2, name: "Brown rice, cooked", serving: "1 cup", kcal: 216, protein: 5, carbs: 45, fat: 1.8 },
-  { id: 3, name: "Avocado", serving: "1/2 medium", kcal: 120, protein: 1.5, carbs: 6, fat: 11 },
-  { id: 4, name: "Greek yogurt, plain", serving: "170g", kcal: 100, protein: 17, carbs: 6, fat: 0.7 },
-  { id: 5, name: "Whole wheat toast", serving: "1 slice", kcal: 80, protein: 4, carbs: 14, fat: 1 },
-  { id: 6, name: "Almonds", serving: "28g handful", kcal: 164, protein: 6, carbs: 6, fat: 14 },
-  { id: 7, name: "Banana", serving: "1 medium", kcal: 105, protein: 1.3, carbs: 27, fat: 0.4 },
-  { id: 8, name: "Salmon fillet", serving: "170g", kcal: 367, protein: 39, carbs: 0, fat: 22 },
-  { id: 9, name: "Protein smoothie", serving: "1 shake", kcal: 220, protein: 30, carbs: 15, fat: 4 },
-  { id: 10, name: "Paneer pasta", serving: "1 bowl", kcal: 640, protein: 32, carbs: 70, fat: 22 },
+  { id: 1, name: "Grilled chicken breast", serving: "150g", kcal: 248, protein: 46, carbs: 0, fat: 5.4, fiber: 0, cuisine: "American", diet: ["glutenFree", "dairyFree"] },
+  { id: 2, name: "Brown rice, cooked", serving: "1 cup", kcal: 216, protein: 5, carbs: 45, fat: 1.8, fiber: 3.5, cuisine: "American", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
+  { id: 3, name: "Avocado", serving: "1/2 medium", kcal: 120, protein: 1.5, carbs: 6, fat: 11, fiber: 5, cuisine: "American", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
+  { id: 4, name: "Greek yogurt, plain", serving: "170g", kcal: 100, protein: 17, carbs: 6, fat: 0.7, fiber: 0, cuisine: "Mediterranean", diet: ["vegetarian", "glutenFree"] },
+  { id: 5, name: "Whole wheat toast", serving: "1 slice", kcal: 80, protein: 4, carbs: 14, fat: 1, fiber: 2, cuisine: "American", diet: ["vegan", "vegetarian", "dairyFree"] },
+  { id: 6, name: "Almonds", serving: "28g handful", kcal: 164, protein: 6, carbs: 6, fat: 14, fiber: 3.5, cuisine: "American", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
+  { id: 7, name: "Banana", serving: "1 medium", kcal: 105, protein: 1.3, carbs: 27, fat: 0.4, fiber: 3, cuisine: "American", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
+  { id: 8, name: "Salmon fillet", serving: "170g", kcal: 367, protein: 39, carbs: 0, fat: 22, fiber: 0, cuisine: "American", diet: ["glutenFree", "dairyFree"] },
+  { id: 9, name: "Protein smoothie", serving: "1 shake", kcal: 220, protein: 30, carbs: 15, fat: 4, fiber: 2, cuisine: "American", diet: ["vegetarian", "glutenFree"] },
+  { id: 10, name: "Paneer pasta", serving: "1 bowl", kcal: 640, protein: 32, carbs: 70, fat: 22, fiber: 4, cuisine: "Italian", diet: ["vegetarian"] },
+  { id: 11, name: "Rajma Chawal", serving: "1 bowl · 350g", kcal: 520, protein: 20, carbs: 78, fat: 12, fiber: 14, cuisine: "Indian", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
+  { id: 12, name: "Butter Chicken", serving: "1 serving · 320g", kcal: 540, protein: 32, carbs: 24, fat: 36, fiber: 3, cuisine: "Indian", diet: ["glutenFree"] },
+  { id: 13, name: "Chole", serving: "1 bowl · 300g", kcal: 420, protein: 15, carbs: 58, fat: 14, fiber: 12, cuisine: "Indian", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
+  { id: 14, name: "Palak Paneer", serving: "1 bowl · 300g", kcal: 380, protein: 18, carbs: 16, fat: 27, fiber: 5, cuisine: "Indian", diet: ["vegetarian", "glutenFree"] },
+  { id: 15, name: "Aloo Paratha", serving: "1 piece", kcal: 290, protein: 6, carbs: 40, fat: 12, fiber: 4, cuisine: "Indian", diet: ["vegan", "vegetarian", "dairyFree"] },
+  { id: 16, name: "Tacos (beef, 2)", serving: "2 tacos", kcal: 380, protein: 22, carbs: 32, fat: 18, fiber: 5, cuisine: "Mexican", diet: ["glutenFree"] },
+  { id: 17, name: "Burrito Bowl", serving: "1 bowl · 400g", kcal: 610, protein: 34, carbs: 68, fat: 20, fiber: 11, cuisine: "Mexican", diet: ["glutenFree"] },
+  { id: 18, name: "Enchiladas (2)", serving: "2 pieces", kcal: 470, protein: 20, carbs: 42, fat: 25, fiber: 6, cuisine: "Mexican", diet: [] },
+  { id: 19, name: "Sushi Roll (8pc)", serving: "8 pieces", kcal: 300, protein: 10, carbs: 50, fat: 6, fiber: 2, cuisine: "Japanese", diet: ["dairyFree"] },
+  { id: 20, name: "Chicken Ramen", serving: "1 bowl", kcal: 500, protein: 28, carbs: 60, fat: 15, fiber: 4, cuisine: "Japanese", diet: [] },
+  { id: 21, name: "Miso Soup", serving: "1 cup", kcal: 60, protein: 4, carbs: 6, fat: 2, fiber: 1, cuisine: "Japanese", diet: ["vegan", "vegetarian", "dairyFree"] },
+  { id: 22, name: "Spaghetti Bolognese", serving: "1 plate · 350g", kcal: 590, protein: 28, carbs: 68, fat: 20, fiber: 5, cuisine: "Italian", diet: ["dairyFree"] },
+  { id: 23, name: "Margherita Pizza (2 slices)", serving: "2 slices", kcal: 480, protein: 18, carbs: 56, fat: 20, fiber: 3, cuisine: "Italian", diet: ["vegetarian"] },
+  { id: 24, name: "Risotto", serving: "1 bowl", kcal: 420, protein: 10, carbs: 60, fat: 14, fiber: 2, cuisine: "Italian", diet: ["vegetarian", "glutenFree"] },
+  { id: 25, name: "Pad Thai", serving: "1 plate", kcal: 550, protein: 22, carbs: 65, fat: 20, fiber: 4, cuisine: "Thai", diet: [] },
+  { id: 26, name: "Green Curry with Chicken", serving: "1 bowl", kcal: 480, protein: 26, carbs: 30, fat: 28, fiber: 4, cuisine: "Thai", diet: ["glutenFree", "dairyFree"] },
+  { id: 27, name: "Hummus & Pita", serving: "1 serving", kcal: 350, protein: 11, carbs: 45, fat: 15, fiber: 8, cuisine: "Middle Eastern", diet: ["vegan", "vegetarian", "dairyFree"] },
+  { id: 28, name: "Falafel Wrap", serving: "1 wrap", kcal: 460, protein: 15, carbs: 55, fat: 20, fiber: 9, cuisine: "Middle Eastern", diet: ["vegan", "vegetarian", "dairyFree"] },
+  { id: 29, name: "Chicken Shawarma Wrap", serving: "1 wrap", kcal: 520, protein: 32, carbs: 45, fat: 22, fiber: 4, cuisine: "Middle Eastern", diet: ["dairyFree"] },
+  { id: 30, name: "Vegetable Fried Rice", serving: "1 bowl · 300g", kcal: 420, protein: 10, carbs: 65, fat: 12, fiber: 4, cuisine: "Chinese", diet: ["vegan", "vegetarian", "dairyFree"] },
+  { id: 31, name: "Kung Pao Chicken", serving: "1 serving", kcal: 490, protein: 30, carbs: 28, fat: 26, fiber: 3, cuisine: "Chinese", diet: ["dairyFree"] },
+  { id: 32, name: "Cheeseburger", serving: "1 burger", kcal: 550, protein: 28, carbs: 40, fat: 30, fiber: 2, cuisine: "American", diet: [] },
+  { id: 33, name: "Grilled Chicken Salad", serving: "1 bowl", kcal: 380, protein: 35, carbs: 18, fat: 18, fiber: 6, cuisine: "American", diet: ["glutenFree", "dairyFree"] },
+  { id: 34, name: "Greek Salad", serving: "1 bowl", kcal: 320, protein: 9, carbs: 16, fat: 26, fiber: 5, cuisine: "Mediterranean", diet: ["vegetarian", "glutenFree"] },
+  { id: 35, name: "Grilled Salmon & Veg", serving: "1 plate", kcal: 460, protein: 38, carbs: 12, fat: 28, fiber: 4, cuisine: "Mediterranean", diet: ["glutenFree", "dairyFree"] },
+  { id: 36, name: "Jerk Chicken & Rice", serving: "1 plate", kcal: 610, protein: 36, carbs: 68, fat: 20, fiber: 4, cuisine: "Caribbean", diet: ["glutenFree", "dairyFree"] },
+  { id: 37, name: "Jollof Rice", serving: "1 bowl", kcal: 450, protein: 9, carbs: 78, fat: 12, fiber: 4, cuisine: "African", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
+  { id: 38, name: "Chicken Adobo & Rice", serving: "1 plate", kcal: 580, protein: 32, carbs: 60, fat: 22, fiber: 2, cuisine: "Filipino", diet: ["glutenFree", "dairyFree"] },
 ];
 
 const MEALS = ["Breakfast", "Lunch", "Snack", "Dinner"];
@@ -72,7 +104,7 @@ const initialLog = [
   { logId: "a8", meal: "Dinner", food: FOOD_DB[4], qty: 2 },
 ];
 
-const TARGETS = { kcal: 2200, protein: 120, carbs: 250, fat: 70, water: 2.5, steps: 10000 };
+const TARGETS = { kcal: 2200, protein: 120, carbs: 250, fat: 70, fiber: 28, water: 2.5, steps: 10000 };
 
 const GOALS = ["Lose Fat", "Build Muscle", "Gain Weight", "Tone & Sculpt", "Get Stronger", "General Fitness"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced"];
@@ -657,6 +689,16 @@ export default function FitSyncPrototype() {
   const [expandedSections, setExpandedSections] = useState({ benefits: false, mistakes: false, alternatives: false });
   const [exerciseHistory, setExerciseHistory] = useState({});
   const [recordToast, setRecordToast] = useState(null);
+  const [nutritionTab, setNutritionTab] = useState("today");
+  const [selectedCuisine, setSelectedCuisine] = useState(null);
+  const [dietaryPrefs, setDietaryPrefs] = useState([]);
+  const [myRecipes, setMyRecipes] = useState([]);
+  const [recipeName, setRecipeName] = useState("");
+  const [recipeServings, setRecipeServings] = useState(4);
+  const [recipeIngredients, setRecipeIngredients] = useState([]);
+  const [recipeIngredientPick, setRecipeIngredientPick] = useState(FOOD_DB[0].id);
+  const [showRecipeBuilder, setShowRecipeBuilder] = useState(false);
+  const [mealSuggestions, setMealSuggestions] = useState(null);
 
   function showXp(amount) {
     setXpToast(amount);
@@ -697,6 +739,7 @@ export default function FitSyncPrototype() {
   const proteinConsumed = useMemo(() => sumField(log, "protein"), [log]);
   const carbsConsumed = useMemo(() => sumField(log, "carbs"), [log]);
   const fatConsumed = useMemo(() => sumField(log, "fat"), [log]);
+  const fiberConsumed = useMemo(() => log.reduce((acc, e) => acc + (e.food.fiber || 0) * e.qty, 0), [log]);
   const remaining = Math.max(TARGETS.kcal - kcalConsumed, 0);
   const pctKcal = (kcalConsumed / TARGETS.kcal) * 100;
 
@@ -864,6 +907,96 @@ export default function FitSyncPrototype() {
   function startDurationTimer(ex) {
     setTimer(parseDurationSeconds(ex.detail));
     setTimerLabel(ex.name);
+  }
+
+  function passesDiet(food) {
+    if (dietaryPrefs.length === 0) return true;
+    return dietaryPrefs.every((pref) => (food.diet || []).includes(pref));
+  }
+
+  function addRecipeIngredient() {
+    const food = FOOD_DB.find((f) => f.id === recipeIngredientPick);
+    if (!food) return;
+    setRecipeIngredients((prev) => [...prev, { id: food.id, qty: 1 }]);
+  }
+
+  function removeRecipeIngredient(idx) {
+    setRecipeIngredients((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function computeRecipeTotals(ingredients) {
+    return ingredients.reduce(
+      (acc, ing) => {
+        const food = FOOD_DB.find((f) => f.id === ing.id);
+        if (!food) return acc;
+        acc.kcal += food.kcal * ing.qty;
+        acc.protein += food.protein * ing.qty;
+        acc.carbs += food.carbs * ing.qty;
+        acc.fat += food.fat * ing.qty;
+        return acc;
+      },
+      { kcal: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+  }
+
+  function saveRecipe() {
+    if (!recipeName.trim() || recipeIngredients.length === 0) return;
+    const totals = computeRecipeTotals(recipeIngredients);
+    setMyRecipes((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        name: recipeName.trim(),
+        servings: recipeServings,
+        totals,
+        perServing: {
+          kcal: Math.round(totals.kcal / recipeServings),
+          protein: Math.round(totals.protein / recipeServings),
+          carbs: Math.round(totals.carbs / recipeServings),
+          fat: Math.round(totals.fat / recipeServings),
+        },
+      },
+    ]);
+    setRecipeName("");
+    setRecipeServings(4);
+    setRecipeIngredients([]);
+    setShowRecipeBuilder(false);
+    showXp(15);
+  }
+
+  function addRecipeServingToLog(recipe) {
+    setLog((prev) => [
+      ...prev,
+      {
+        logId: `${Date.now()}`,
+        meal: targetMeal,
+        food: { id: `recipe-${recipe.id}`, name: recipe.name, serving: "1 serving", kcal: recipe.perServing.kcal, protein: recipe.perServing.protein, carbs: recipe.perServing.carbs, fat: recipe.perServing.fat, fiber: 0 },
+        qty: 1,
+      },
+    ]);
+    showXp(10);
+  }
+
+  function buildMealSuggestions() {
+    const remainingKcal = Math.max(TARGETS.kcal - kcalConsumed, 0);
+    const remainingProtein = Math.max(TARGETS.protein - proteinConsumed, 0);
+    const scored = FOOD_DB.filter(passesDiet)
+      .map((f) => {
+        const kcalDiff = Math.abs(f.kcal - remainingKcal * 0.4);
+        const proteinScore = Math.min(f.protein / (remainingProtein || 1), 1.5);
+        return { ...f, _score: proteinScore * 100 - kcalDiff * 0.1 };
+      })
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 3);
+    setMealSuggestions(scored);
+  }
+
+  function nutritionInsight() {
+    const proteinPct = (proteinConsumed / TARGETS.protein) * 100;
+    const fiberPct = (fiberConsumed / TARGETS.fiber) * 100;
+    if (proteinPct >= 90) return { icon: Zap, color: theme.amber, label: "Protein", text: `You're at ${Math.round(proteinPct)}% of your protein goal — right on track.` };
+    if (fiberPct < 50) return { icon: Leaf, color: theme.lime, label: "Fiber", text: `You're at ${Math.round(fiberConsumed)}g of ${TARGETS.fiber}g fiber — a piece of fruit or legumes would help.` };
+    return { icon: Droplet, color: theme.sky, label: "Hydration", text: "Keep sipping water through the rest of the day — you're doing well overall." };
   }
 
   function handlePhotoUpload(e) {
@@ -1389,69 +1522,300 @@ export default function FitSyncPrototype() {
 
           {activeScreen === "nutrition" && (
             <>
-              <ScreenHeader title="Nutrition" subtitle={`${Math.round(kcalConsumed)} of ${TARGETS.kcal} kcal today`} />
-              <button
-                onClick={() => setShowAddFood(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  background: theme.lime,
-                  color: "#12211D",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "12px 0",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  marginBottom: 20,
-                }}
-              >
-                <Plus size={15} /> Log food
-              </button>
-              {MEALS.map((meal) => {
-                const entries = log.filter((e) => e.meal === meal);
-                return (
-                  <div key={meal} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>{meal}</div>
-                    {entries.length === 0 ? (
-                      <div style={{ fontSize: 12, color: theme.muted, padding: "6px 2px" }}>Nothing logged yet</div>
-                    ) : (
-                      entries.map((e) => (
-                        <div
-                          key={e.logId}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "8px 10px",
-                            background: theme.surface,
-                            borderRadius: 10,
-                            marginBottom: 6,
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontSize: 12.5, color: theme.text }}>
-                              {e.food.name} {e.qty > 1 ? `×${e.qty}` : ""}
-                            </div>
-                            <div style={{ fontSize: 10.5, color: theme.muted }}>{e.food.serving}</div>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: theme.text }}>
-                              {Math.round(e.food.kcal * e.qty)}
-                            </span>
-                            <button onClick={() => removeEntry(e.logId)} style={{ background: "none", border: "none", padding: 2 }}>
-                              <X size={13} color={theme.muted} />
-                            </button>
-                          </div>
+              <ScreenHeader title="Nutrition" subtitle="Your personalized food hub" />
+
+              <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+                {[
+                  { key: "today", label: "Today" },
+                  { key: "explore", label: "Explore" },
+                  { key: "meals", label: "Meals" },
+                ].map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setNutritionTab(t.key)}
+                    style={{
+                      flex: 1,
+                      padding: "9px 0",
+                      borderRadius: 10,
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      border: `1px solid ${nutritionTab === t.key ? theme.lime : theme.border}`,
+                      background: nutritionTab === t.key ? "rgba(201,240,101,0.1)" : "transparent",
+                      color: nutritionTab === t.key ? theme.lime : theme.muted,
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {nutritionTab === "today" && (
+                <>
+                  <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 4 }}>Today's Nutrition</div>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 26, color: theme.text }}>{Math.round(kcalConsumed)}</span>
+                      <span style={{ fontSize: 12, color: theme.muted }}>/ {TARGETS.kcal} kcal</span>
+                    </div>
+                    <div style={{ height: 7, borderRadius: 4, background: theme.surfaceAlt, overflow: "hidden", marginBottom: 6 }}>
+                      <div style={{ height: "100%", width: `${Math.min((kcalConsumed / TARGETS.kcal) * 100, 100)}%`, background: theme.lime, borderRadius: 4 }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: theme.lime, marginBottom: 12 }}>{Math.max(Math.round(TARGETS.kcal - kcalConsumed), 0)} kcal remaining</div>
+                    {[
+                      ["Protein", proteinConsumed, TARGETS.protein, theme.coral],
+                      ["Carbs", carbsConsumed, TARGETS.carbs, theme.lime],
+                      ["Fat", fatConsumed, TARGETS.fat, theme.sky],
+                      ["Fiber", fiberConsumed, TARGETS.fiber, theme.amber],
+                    ].map(([label, val, target, color]) => (
+                      <div key={label} style={{ marginBottom: 6 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                          <span style={{ fontSize: 10.5, color: theme.muted }}>{label}</span>
+                          <span style={{ fontSize: 10.5, color: theme.text, fontFamily: "'IBM Plex Mono', monospace" }}>{Math.round(val)}/{Math.round(target)}g</span>
                         </div>
-                      ))
+                        <div style={{ height: 5, borderRadius: 3, background: theme.surfaceAlt, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${Math.min((val / target) * 100, 100)}%`, background: color, borderRadius: 3 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {(() => {
+                    const insight = nutritionInsight();
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "11px 14px", marginBottom: 16 }}>
+                        <insight.icon size={16} color={insight.color} style={{ flexShrink: 0 }} />
+                        <div style={{ fontSize: 12, color: theme.text, lineHeight: 1.4 }}>{insight.text}</div>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    onClick={() => setShowAddFood(true)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: theme.lime, color: "#12211D", border: "none", borderRadius: 10, padding: "12px 0", fontSize: 13, fontWeight: 600, marginBottom: 20, width: "100%" }}
+                  >
+                    <Plus size={15} /> Log food
+                  </button>
+
+                  {MEALS.map((meal) => {
+                    const entries = log.filter((e) => e.meal === meal);
+                    return (
+                      <div key={meal} style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>{meal}</div>
+                        {entries.length === 0 ? (
+                          <div style={{ fontSize: 12, color: theme.muted, padding: "6px 2px" }}>Nothing logged yet</div>
+                        ) : (
+                          entries.map((e) => (
+                            <div key={e.logId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: theme.surface, borderRadius: 10, marginBottom: 6 }}>
+                              <div>
+                                <div style={{ fontSize: 12.5, color: theme.text }}>{e.food.name} {e.qty > 1 ? `×${e.qty}` : ""}</div>
+                                <div style={{ fontSize: 10.5, color: theme.muted }}>{e.food.serving}</div>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: theme.text }}>{Math.round(e.food.kcal * e.qty)}</span>
+                                <button onClick={() => removeEntry(e.logId)} style={{ background: "none", border: "none", padding: 2 }}>
+                                  <X size={13} color={theme.muted} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+
+              {nutritionTab === "explore" && (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                    <Globe size={13} color={theme.muted} style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase" }}>Browse by cuisine</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                    <button
+                      onClick={() => setSelectedCuisine(null)}
+                      style={{ padding: "6px 11px", borderRadius: 8, fontSize: 11, border: `1px solid ${!selectedCuisine ? theme.lime : theme.border}`, background: !selectedCuisine ? "rgba(201,240,101,0.08)" : "transparent", color: !selectedCuisine ? theme.lime : theme.muted }}
+                    >
+                      All
+                    </button>
+                    {CUISINES.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setSelectedCuisine(c)}
+                        style={{ padding: "6px 11px", borderRadius: 8, fontSize: 11, border: `1px solid ${selectedCuisine === c ? theme.lime : theme.border}`, background: selectedCuisine === c ? "rgba(201,240,101,0.08)" : "transparent", color: selectedCuisine === c ? theme.lime : theme.muted }}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Dietary preferences</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+                    {["vegetarian", "vegan", "glutenFree", "dairyFree"].map((d) => {
+                      const active = dietaryPrefs.includes(d);
+                      const label = d === "glutenFree" ? "Gluten-free" : d === "dairyFree" ? "Dairy-free" : d[0].toUpperCase() + d.slice(1);
+                      return (
+                        <button
+                          key={d}
+                          onClick={() => setDietaryPrefs((prev) => (active ? prev.filter((x) => x !== d) : [...prev, d]))}
+                          style={{ padding: "6px 11px", borderRadius: 8, fontSize: 11, border: `1px solid ${active ? theme.sky : theme.border}`, background: active ? "rgba(126,200,227,0.1)" : "transparent", color: active ? theme.sky : theme.muted }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {FOOD_DB.filter((f) => (!selectedCuisine || f.cuisine === selectedCuisine) && passesDiet(f)).length === 0 ? (
+                    <div style={{ fontSize: 12, color: theme.muted, padding: "20px 0", textAlign: "center" }}>No dishes match these filters yet.</div>
+                  ) : (
+                    FOOD_DB.filter((f) => (!selectedCuisine || f.cuisine === selectedCuisine) && passesDiet(f)).map((f) => (
+                      <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px 12px", marginBottom: 6 }}>
+                        <div>
+                          <div style={{ fontSize: 13, color: theme.text }}>{f.name}</div>
+                          <div style={{ fontSize: 10.5, color: theme.muted }}>{f.cuisine} · {f.serving} · {f.kcal} kcal</div>
+                        </div>
+                        <button
+                          onClick={() => quickAdd(f)}
+                          style={{ width: 28, height: 28, borderRadius: "50%", background: theme.surfaceAlt, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                        >
+                          <Plus size={13} color={theme.lime} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {nutritionTab === "meals" && (
+                <>
+                  <div style={{ background: theme.surface, border: `1px solid ${theme.lime}`, borderRadius: 12, padding: "14px 16px", marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                      <Sparkles size={15} color={theme.lime} />
+                      <span style={{ fontSize: 13, color: theme.text, fontWeight: 600 }}>AI Meal Builder</span>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: theme.muted, marginBottom: 10, lineHeight: 1.4 }}>
+                      Based on what's left today: {Math.max(Math.round(TARGETS.kcal - kcalConsumed), 0)} kcal and {Math.max(Math.round(TARGETS.protein - proteinConsumed), 0)}g protein remaining.
+                    </div>
+                    <button
+                      onClick={buildMealSuggestions}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 10, padding: "10px 0", fontSize: 12.5, fontWeight: 600 }}
+                    >
+                      Build my meal
+                    </button>
+                    {mealSuggestions && (
+                      <div style={{ marginTop: 12 }}>
+                        {mealSuggestions.map((f) => (
+                          <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: theme.surfaceAlt, borderRadius: 10, padding: "9px 11px", marginBottom: 6 }}>
+                            <div>
+                              <div style={{ fontSize: 12.5, color: theme.text }}>{f.name}</div>
+                              <div style={{ fontSize: 10, color: theme.muted }}>{f.kcal} kcal · {f.protein}g protein</div>
+                            </div>
+                            <button onClick={() => quickAdd(f)} style={{ background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 10.5, fontWeight: 600 }}>Add</button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                );
-              })}
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <ChefHat size={14} color={theme.text} />
+                      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 600, color: theme.text }}>My Recipes</span>
+                    </div>
+                    <button
+                      onClick={() => setShowRecipeBuilder((s) => !s)}
+                      style={{ display: "flex", alignItems: "center", gap: 4, background: "transparent", border: `1px solid ${theme.lime}`, color: theme.lime, borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 600 }}
+                    >
+                      <Plus size={12} /> Create
+                    </button>
+                  </div>
+
+                  {showRecipeBuilder && (
+                    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", marginBottom: 16 }}>
+                      <input
+                        value={recipeName}
+                        onChange={(e) => setRecipeName(e.target.value)}
+                        placeholder="Recipe name"
+                        style={{ width: "100%", background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "9px 11px", color: theme.text, fontSize: 13, marginBottom: 10, outline: "none" }}
+                      />
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                        <span style={{ fontSize: 11, color: theme.muted }}>Servings</span>
+                        <button onClick={() => setRecipeServings((s) => Math.max(1, s - 1))} style={{ width: 24, height: 24, borderRadius: 6, border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text }}>−</button>
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: theme.text }}>{recipeServings}</span>
+                        <button onClick={() => setRecipeServings((s) => s + 1)} style={{ width: 24, height: 24, borderRadius: 6, border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text }}>+</button>
+                      </div>
+
+                      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                        <select
+                          value={recipeIngredientPick}
+                          onChange={(e) => setRecipeIngredientPick(Number(e.target.value))}
+                          style={{ flex: 1, background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "9px 8px", color: theme.text, fontSize: 12, outline: "none" }}
+                        >
+                          {FOOD_DB.map((f) => (
+                            <option key={f.id} value={f.id}>{f.name}</option>
+                          ))}
+                        </select>
+                        <button onClick={addRecipeIngredient} style={{ background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "0 14px", fontSize: 12, fontWeight: 600 }}>Add</button>
+                      </div>
+
+                      {recipeIngredients.length > 0 && (
+                        <div style={{ marginBottom: 10 }}>
+                          {recipeIngredients.map((ing, i) => {
+                            const food = FOOD_DB.find((f) => f.id === ing.id);
+                            return (
+                              <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, color: theme.muted, padding: "5px 0" }}>
+                                <span>{food ? food.name : "Unknown"}</span>
+                                <button onClick={() => removeRecipeIngredient(i)} style={{ background: "none", border: "none" }}>
+                                  <X size={12} color={theme.muted} />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {recipeIngredients.length > 0 && (
+                        <div style={{ fontSize: 11, color: theme.sky, marginBottom: 10 }}>
+                          Per serving: {Math.round(computeRecipeTotals(recipeIngredients).kcal / recipeServings)} kcal · {Math.round(computeRecipeTotals(recipeIngredients).protein / recipeServings)}g protein
+                        </div>
+                      )}
+
+                      <button
+                        onClick={saveRecipe}
+                        style={{ width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "10px 0", fontSize: 12.5, fontWeight: 600 }}
+                      >
+                        Save recipe
+                      </button>
+                    </div>
+                  )}
+
+                  {myRecipes.length === 0 ? (
+                    <div style={{ fontSize: 12, color: theme.muted, padding: "10px 0" }}>No recipes yet — create one above.</div>
+                  ) : (
+                    myRecipes.map((r) => (
+                      <div key={r.id} style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 13, color: theme.text, fontWeight: 600 }}>{r.name}</span>
+                          <span style={{ fontSize: 10.5, color: theme.muted }}>{r.servings} servings</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: theme.muted, marginBottom: 10 }}>
+                          Per serving: {r.perServing.kcal} kcal · {r.perServing.protein}g protein · {r.perServing.carbs}g carbs · {r.perServing.fat}g fat
+                        </div>
+                        <button
+                          onClick={() => addRecipeServingToLog(r)}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px solid ${theme.lime}`, color: theme.lime, borderRadius: 8, padding: "8px 0", fontSize: 12, fontWeight: 600 }}
+                        >
+                          <Plus size={12} /> Add 1 serving to log
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
             </>
           )}
+
 
           {activeScreen === "workout" && (
             <>
