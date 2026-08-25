@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Camera,
@@ -268,6 +268,181 @@ function getQuickAddFoods(log, limit = 4) {
     .filter(Boolean);
 }
 
+const EXERCISE_FAMILIES = {
+  squat: {
+    category: "Compound · Lower Body",
+    primary: ["Quads", "Glutes"],
+    secondary: ["Core", "Hamstrings"],
+    benefits: ["Builds lower-body strength", "Improves everyday movement patterns like sitting and standing", "Engages your core for stability"],
+    steps: ["Stand with feet shoulder-width apart, weight in your heels.", "Sit your hips back and down as if sitting into a chair.", "Keep your chest up and knees tracking over your toes.", "Drive through your heels to stand back up."],
+    mistakes: ["Knees collapsing inward", "Rounding your lower back", "Rising onto your toes"],
+    alternatives: { easier: "Bodyweight squat", harder: "Barbell back squat", noEquipment: "Bodyweight squat, slow tempo" },
+  },
+  press: {
+    category: "Compound · Upper Body Push",
+    primary: ["Shoulders", "Chest"],
+    secondary: ["Triceps", "Core"],
+    benefits: ["Builds pressing strength", "Improves shoulder stability", "Carries over to everyday pushing movements"],
+    steps: ["Start with the weight at shoulder height, elbows slightly forward.", "Brace your core before pressing.", "Press up until your arms are extended, without locking out hard.", "Lower with control back to the start position."],
+    mistakes: ["Arching your lower back excessively", "Flaring elbows too wide", "Using momentum instead of controlled strength"],
+    alternatives: { easier: "Seated press with lighter weight", harder: "Standing overhead press", noEquipment: "Pike push-up" },
+  },
+  pull: {
+    category: "Compound · Upper Body Pull",
+    primary: ["Back", "Lats"],
+    secondary: ["Biceps", "Rear Shoulders"],
+    benefits: ["Builds a stronger back", "Improves posture", "Balances out pushing exercises"],
+    steps: ["Set up with a stable grip and braced core.", "Initiate the pull by drawing your shoulder blades together.", "Pull through until your elbows pass your torso.", "Control the return to a full stretch."],
+    mistakes: ["Using momentum or swinging", "Shrugging shoulders up toward your ears", "Only using your arms instead of your back"],
+    alternatives: { easier: "Band-assisted row", harder: "Weighted row or pull-up", noEquipment: "Towel row against a table edge" },
+  },
+  push: {
+    category: "Compound · Upper Body Push",
+    primary: ["Chest", "Shoulders"],
+    secondary: ["Triceps", "Core"],
+    benefits: ["Builds functional pushing strength", "No equipment needed", "Strengthens your core to keep your body straight"],
+    steps: ["Hands slightly wider than shoulders, body in a straight line.", "Lower your chest toward the floor with control.", "Keep your elbows at roughly a 45° angle from your body.", "Press back up to the start position."],
+    mistakes: ["Letting your hips sag", "Flaring elbows out to 90°", "Not going through a full range of motion"],
+    alternatives: { easier: "Incline push-up on a bench or step", harder: "Deficit or weighted push-up", noEquipment: "Already bodyweight — try knee push-ups to regress" },
+  },
+  hinge: {
+    category: "Compound · Posterior Chain",
+    primary: ["Hamstrings", "Glutes"],
+    secondary: ["Lower Back", "Core"],
+    benefits: ["Strengthens your posterior chain", "Improves hip hinge mechanics for daily life", "Reduces lower-back injury risk when done with good form"],
+    steps: ["Stand tall holding the weight in front of your thighs.", "Push your hips back while keeping a flat back.", "Lower until you feel a stretch in your hamstrings.", "Drive your hips forward to return to standing."],
+    mistakes: ["Rounding your back", "Bending the knees too much (turning it into a squat)", "Letting the weight drift away from your body"],
+    alternatives: { easier: "Single-dumbbell Romanian deadlift", harder: "Barbell deadlift", noEquipment: "Bodyweight good morning" },
+  },
+  lunge: {
+    category: "Compound · Lower Body",
+    primary: ["Quads", "Glutes"],
+    secondary: ["Core", "Balance"],
+    benefits: ["Builds single-leg strength and balance", "Corrects side-to-side strength imbalances", "Carries over to walking and running mechanics"],
+    steps: ["Step forward into a controlled stride.", "Lower until both knees are around 90°.", "Keep your front knee tracking over your foot, not caving in.", "Push back through your front heel to return to standing."],
+    mistakes: ["Letting the front knee cave inward", "Taking a stride that's too short", "Leaning too far forward"],
+    alternatives: { easier: "Stationary split squat, holding support", harder: "Walking lunge with added weight", noEquipment: "Bodyweight reverse lunge" },
+  },
+  core: {
+    category: "Isolation · Core",
+    primary: ["Abs", "Obliques"],
+    secondary: ["Hip Flexors", "Lower Back"],
+    benefits: ["Builds core stability", "Supports better posture", "Protects your spine during other lifts"],
+    steps: ["Set up in a stable, controlled starting position.", "Engage your core before moving.", "Move slowly and with control — avoid rushing reps.", "Keep breathing steadily throughout."],
+    mistakes: ["Holding your breath", "Using momentum instead of control", "Letting your lower back arch off the floor"],
+    alternatives: { easier: "Shorter hold or fewer reps", harder: "Add a slow tempo or extra hold", noEquipment: "Already bodyweight" },
+  },
+  curl: {
+    category: "Isolation · Arms",
+    primary: ["Biceps"],
+    secondary: ["Forearms"],
+    benefits: ["Builds arm strength and size", "Simple, low-injury-risk movement", "Great for tracking visible progress"],
+    steps: ["Stand tall, arms fully extended, weights at your sides.", "Curl the weight up without swinging your torso.", "Squeeze at the top briefly.", "Lower slowly back to the start."],
+    mistakes: ["Swinging your body to generate momentum", "Only doing half the range of motion", "Moving too fast"],
+    alternatives: { easier: "Lighter weight or fewer reps", harder: "Slower tempo or heavier weight", noEquipment: "Resistance band curl" },
+  },
+  triceps: {
+    category: "Isolation · Arms",
+    primary: ["Triceps"],
+    secondary: [],
+    benefits: ["Builds arm definition", "Complements pressing strength", "Quick to add to any upper-body day"],
+    steps: ["Set up with elbows tucked close to your body.", "Extend your arms fully without flaring your elbows out.", "Squeeze your triceps at full extension.", "Return with control."],
+    mistakes: ["Letting elbows drift outward", "Using your shoulders instead of your triceps", "Rushing the movement"],
+    alternatives: { easier: "Lighter weight, focus on form", harder: "Slower eccentric (lowering) phase", noEquipment: "Bodyweight dips on a chair" },
+  },
+  cardio: {
+    category: "Cardio · Full Body",
+    primary: ["Heart & Lungs"],
+    secondary: ["Full Body"],
+    benefits: ["Raises your heart rate efficiently", "Burns calories in a short amount of time", "No equipment required"],
+    steps: ["Keep a steady, sustainable pace rather than sprinting the first few seconds.", "Land softly to protect your joints.", "Breathe rhythmically throughout.", "Slow down if your form starts to break down."],
+    mistakes: ["Going too hard too fast and burning out", "Landing heavily instead of softly", "Holding your breath"],
+    alternatives: { easier: "Slower pace or a low-impact variation", harder: "Add a jump or increase your pace", noEquipment: "Already bodyweight" },
+  },
+  mobility: {
+    category: "Mobility · Recovery",
+    primary: ["Targeted muscle group"],
+    secondary: ["Connective tissue"],
+    benefits: ["Improves flexibility and range of motion", "Helps your body recover between workouts", "Can reduce muscle tightness and soreness"],
+    steps: ["Ease into the position gently — never force it.", "Breathe slowly and deeply throughout.", "Hold at a point of mild tension, not pain.", "Release slowly and switch sides if needed."],
+    mistakes: ["Bouncing instead of holding steady", "Forcing a deeper stretch than feels comfortable", "Holding your breath"],
+    alternatives: { easier: "Shorter hold, smaller range of motion", harder: "Deepen the stretch slightly or hold longer", noEquipment: "Already equipment-free" },
+  },
+  raise: {
+    category: "Isolation · Shoulders",
+    primary: ["Shoulders"],
+    secondary: ["Upper Back"],
+    benefits: ["Builds shoulder definition", "Improves shoulder stability", "Low-impact and joint-friendly"],
+    steps: ["Start with weights at your sides, slight bend in the elbows.", "Raise your arms out to the sides to shoulder height.", "Pause briefly at the top.", "Lower with control."],
+    mistakes: ["Using momentum to swing the weights up", "Raising above shoulder height", "Shrugging your shoulders up"],
+    alternatives: { easier: "Lighter weight", harder: "Slower tempo, pause at the top", noEquipment: "Resistance band lateral raise" },
+  },
+  calf: {
+    category: "Isolation · Lower Body",
+    primary: ["Calves"],
+    secondary: [],
+    benefits: ["Builds lower-leg strength", "Supports ankle stability", "Quick and easy to add to any leg day"],
+    steps: ["Stand tall, weight balanced evenly.", "Rise up onto your toes as high as comfortable.", "Pause briefly at the top.", "Lower slowly back down."],
+    mistakes: ["Rushing through reps", "Not going through a full range of motion", "Using momentum to bounce up"],
+    alternatives: { easier: "Fewer reps or seated variation", harder: "Single-leg calf raise", noEquipment: "Already bodyweight" },
+  },
+  default: {
+    category: "Full Body",
+    primary: ["Multiple muscle groups"],
+    secondary: ["Core"],
+    benefits: ["Supports your overall training goal", "Builds strength and coordination", "Fits well into a balanced routine"],
+    steps: ["Set up in a stable, controlled position.", "Move through the exercise with control.", "Keep your core engaged throughout.", "Return to the start position with control."],
+    mistakes: ["Rushing through reps", "Losing core tension", "Using momentum instead of muscle control"],
+    alternatives: { easier: "Reduce weight, reps, or range of motion", harder: "Increase weight, reps, or slow the tempo", noEquipment: "Try a bodyweight variation" },
+  },
+};
+
+function detectFamily(name) {
+  const n = name.toLowerCase();
+  if (n.includes("squat")) return "squat";
+  if (n.includes("press")) return "press";
+  if (n.includes("row") || n.includes("pulldown") || n.includes("pull-up") || n.includes("pull up")) return "pull";
+  if (n.includes("push-up") || n.includes("push up") || n.includes("dip")) return "push";
+  if (n.includes("deadlift") || n.includes("hinge")) return "hinge";
+  if (n.includes("lunge")) return "lunge";
+  if (n.includes("plank") || n.includes("crunch") || n.includes("dead bug") || n.includes("bird dog")) return "core";
+  if (n.includes("curl") && !n.includes("kickback")) return "curl";
+  if (n.includes("kickback") || n.includes("tricep")) return "triceps";
+  if (n.includes("raise")) return "raise";
+  if (n.includes("calf")) return "calf";
+  if (n.includes("jack") || n.includes("mountain climber") || n.includes("burpee") || n.includes("high knee")) return "cardio";
+  if (
+    n.includes("stretch") || n.includes("pose") || n.includes("roll") || n.includes("breathing") ||
+    n.includes("twist") || n.includes("fold") || n.includes("bridge") || n.includes("child") ||
+    n.includes("cobra") || n.includes("pigeon") || n.includes("butterfly") || n.includes("cat-cow") ||
+    n.includes("hydrant") || n.includes("donkey") || n.includes("walking recovery")
+  )
+    return "mobility";
+  return "default";
+}
+
+function buildExerciseDetail(ex) {
+  const family = EXERCISE_FAMILIES[detectFamily(ex.name)] || EXERCISE_FAMILIES.default;
+  return { ...family, coachTip: ex.tip, name: ex.name, detail: ex.detail };
+}
+
+function parseSetsReps(detail) {
+  if (!detail) return null;
+  const m = detail.match(/(\d+)\s*sets?\s*x\s*(\d+)\s*([a-z ]+)/i);
+  if (!m) return null;
+  const unit = /rep/i.test(m[3]) ? "reps" : "seconds";
+  return { sets: parseInt(m[1]), amount: parseInt(m[2]), unit };
+}
+
+function parseDurationSeconds(detail) {
+  if (!detail) return 45;
+  const mMin = detail.match(/(\d+)\s*minute/i);
+  if (mMin) return parseInt(mMin[1]) * 60;
+  const mSec = detail.match(/(\d+)\s*second/i);
+  if (mSec) return parseInt(mSec[1]);
+  return 45;
+}
+
 function scoreWorkout(w, profile) {
   let score = 0;
   if (profile.goal && w.goal === profile.goal) score += 2;
@@ -438,11 +613,43 @@ export default function FitSyncPrototype() {
   const [measurementError, setMeasurementError] = useState("");
   const [xpToast, setXpToast] = useState(null);
   const [activeSession, setActiveSession] = useState(null);
+  const [currentSets, setCurrentSets] = useState(null);
+  const [timer, setTimer] = useState(null);
+  const [timerLabel, setTimerLabel] = useState("");
+  const [expandedSections, setExpandedSections] = useState({ benefits: false, mistakes: false, alternatives: false });
+  const [exerciseHistory, setExerciseHistory] = useState({});
+  const [recordToast, setRecordToast] = useState(null);
 
   function showXp(amount) {
     setXpToast(amount);
     setTimeout(() => setXpToast(null), 1600);
   }
+
+  useEffect(() => {
+    if (timer === null) return;
+    if (timer <= 0) {
+      setTimer(null);
+      return;
+    }
+    const t = setTimeout(() => setTimer((v) => (v !== null ? v - 1 : null)), 1000);
+    return () => clearTimeout(t);
+  }, [timer]);
+
+  useEffect(() => {
+    if (!activeSession) {
+      setCurrentSets(null);
+      return;
+    }
+    const ex = activeSession.list[activeSession.index];
+    const parsed = parseSetsReps(ex.detail);
+    if (parsed && parsed.unit === "reps") {
+      setCurrentSets(Array.from({ length: parsed.sets }, () => ({ weight: 10, reps: parsed.amount, done: false })));
+    } else {
+      setCurrentSets(null);
+    }
+    setExpandedSections({ benefits: false, mistakes: false, alternatives: false });
+    setTimer(null);
+  }, [activeSession && activeSession.index, activeSession && activeSession.workout]);
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hey! I'm your coach. I'll keep an eye on your trends and help you adjust your plan. Ask me anything, or tell me how today's going." },
   ]);
@@ -574,6 +781,51 @@ export default function FitSyncPrototype() {
     setTimeout(() => setWorkoutFeedback(null), 2500);
     showXp(30);
     setActiveSession(null);
+  }
+
+  function updateSet(i, field, delta) {
+    setCurrentSets((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      const val = Math.max(field === "weight" ? 0 : 1, next[i][field] + delta);
+      next[i] = { ...next[i], [field]: val };
+      return next;
+    });
+  }
+
+  function completeSet(i) {
+    const set = currentSets[i];
+    setCurrentSets((prev) => {
+      const next = [...prev];
+      next[i] = { ...next[i], done: true };
+      return next;
+    });
+    showXp(5);
+    if (i < currentSets.length - 1) {
+      setTimer(60);
+      setTimerLabel("Rest");
+    } else {
+      const ex = activeSession.list[activeSession.index];
+      checkRecord(ex.name, set);
+    }
+  }
+
+  function checkRecord(name, set) {
+    const prevBest = exerciseHistory[name];
+    const improved = !prevBest || set.reps > prevBest.reps || set.weight > prevBest.weight;
+    if (improved) {
+      setRecordToast(prevBest ? `New record on ${name}!` : null);
+      if (prevBest) {
+        setTimeout(() => setRecordToast(null), 2200);
+        showXp(20);
+      }
+    }
+    setExerciseHistory((prev) => ({ ...prev, [name]: { weight: set.weight, reps: set.reps } }));
+  }
+
+  function startDurationTimer(ex) {
+    setTimer(parseDurationSeconds(ex.detail));
+    setTimerLabel(ex.name);
   }
 
   function handlePhotoUpload(e) {
@@ -1519,83 +1771,178 @@ export default function FitSyncPrototype() {
           })}
         </div>
 
-        {activeSession && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: theme.bg,
-              zIndex: 30,
-              display: "flex",
-              flexDirection: "column",
-              padding: "20px 22px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <button onClick={() => setActiveSession(null)} style={{ background: "none", border: "none", padding: 4 }}>
-                <X size={18} color={theme.muted} />
-              </button>
-              <span style={{ fontSize: 11, color: theme.muted, fontFamily: "'IBM Plex Mono', monospace" }}>
-                {activeSession.index + 1} / {activeSession.list.length}
-              </span>
-            </div>
-            <div style={{ fontSize: 12, color: theme.muted, marginBottom: 20 }}>{activeSession.workout.name}</div>
-
-            <div style={{ height: 4, borderRadius: 3, background: theme.surfaceAlt, overflow: "hidden", marginBottom: 30 }}>
-              <div
-                style={{
-                  height: "100%",
-                  borderRadius: 3,
-                  background: theme.lime,
-                  width: `${((activeSession.index + 1) / activeSession.list.length) * 100}%`,
-                  transition: "width 0.3s ease",
-                }}
-              />
-            </div>
-
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <div style={{ width: 64, height: 64, borderRadius: 16, background: theme.surface, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-                <Dumbbell size={28} color={theme.lime} />
-              </div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: theme.text, marginBottom: 10, lineHeight: 1.2 }}>
-                {activeSession.list[activeSession.index].name}
-              </div>
-              {activeSession.list[activeSession.index].detail && (
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: theme.lime, marginBottom: 20 }}>
-                  {activeSession.list[activeSession.index].detail}
+        {activeSession && (() => {
+          const ex = activeSession.list[activeSession.index];
+          const detail = buildExerciseDetail(ex);
+          const isLast = activeSession.index === activeSession.list.length - 1;
+          const prevRecord = exerciseHistory[ex.name];
+          return (
+            <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+              <div style={{ padding: "20px 22px 0" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <button onClick={() => setActiveSession(null)} style={{ background: "none", border: "none", padding: 4 }}>
+                    <X size={18} color={theme.muted} />
+                  </button>
+                  <span style={{ fontSize: 11, color: theme.muted, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {activeSession.index + 1} / {activeSession.list.length}
+                  </span>
                 </div>
-              )}
-              <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px 16px" }}>
-                <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>How to do it</div>
-                <div style={{ fontSize: 13, color: theme.text, lineHeight: 1.5 }}>{activeSession.list[activeSession.index].tip}</div>
+                <div style={{ fontSize: 12, color: theme.muted, marginBottom: 12 }}>{activeSession.workout.name}</div>
+                <div style={{ height: 4, borderRadius: 3, background: theme.surfaceAlt, overflow: "hidden", marginBottom: 16 }}>
+                  <div style={{ height: "100%", borderRadius: 3, background: theme.lime, width: `${((activeSession.index + 1) / activeSession.list.length) * 100}%`, transition: "width 0.3s ease" }} />
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: "auto", padding: "0 22px 20px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
+                  <div style={{ width: 60, height: 60, borderRadius: 14, background: theme.surface, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Dumbbell size={26} color={theme.lime} />
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 19, fontWeight: 700, color: theme.text, lineHeight: 1.2, marginBottom: 3 }}>{ex.name}</div>
+                    <div style={{ fontSize: 11, color: theme.muted }}>{detail.category}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                  {detail.primary.map((m) => (
+                    <span key={m} style={{ fontSize: 10, color: theme.lime, background: "rgba(201,240,101,0.1)", border: `1px solid ${theme.lime}`, borderRadius: 6, padding: "3px 8px" }}>{m}</span>
+                  ))}
+                  {detail.secondary.map((m) => (
+                    <span key={m} style={{ fontSize: 10, color: theme.muted, background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 6, padding: "3px 8px" }}>{m}</span>
+                  ))}
+                </div>
+
+                {ex.detail && (
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: theme.text, marginBottom: 12 }}>{ex.detail}</div>
+                )}
+
+                {prevRecord && (
+                  <div style={{ fontSize: 11, color: theme.sky, marginBottom: 12 }}>
+                    Last time: {prevRecord.weight}kg × {prevRecord.reps}
+                  </div>
+                )}
+
+                <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, letterSpacing: 1, color: theme.lime, textTransform: "uppercase", marginBottom: 6 }}>Coach Tip</div>
+                  <div style={{ fontSize: 13, color: theme.text, lineHeight: 1.5 }}>{detail.coachTip}</div>
+                </div>
+
+                {currentSets ? (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Your Sets</div>
+                    {currentSets.map((set, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: theme.surface, border: `1px solid ${set.done ? theme.lime : theme.border}`, borderRadius: 10, marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, color: theme.muted, width: 16 }}>{i + 1}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <button disabled={set.done} onClick={() => updateSet(i, "weight", -2.5)} style={{ width: 22, height: 22, borderRadius: 6, border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, fontSize: 12 }}>−</button>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: theme.text, minWidth: 42, textAlign: "center" }}>{set.weight}kg</span>
+                          <button disabled={set.done} onClick={() => updateSet(i, "weight", 2.5)} style={{ width: 22, height: 22, borderRadius: 6, border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, fontSize: 12 }}>+</button>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <button disabled={set.done} onClick={() => updateSet(i, "reps", -1)} style={{ width: 22, height: 22, borderRadius: 6, border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, fontSize: 12 }}>−</button>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: theme.text, minWidth: 34, textAlign: "center" }}>{set.reps}r</span>
+                          <button disabled={set.done} onClick={() => updateSet(i, "reps", 1)} style={{ width: 22, height: 22, borderRadius: 6, border: `1px solid ${theme.border}`, background: theme.surfaceAlt, color: theme.text, fontSize: 12 }}>+</button>
+                        </div>
+                        <div style={{ flex: 1 }} />
+                        {set.done ? (
+                          <Check size={16} color={theme.lime} />
+                        ) : (
+                          <button onClick={() => completeSet(i)} style={{ background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 10.5, fontWeight: 600 }}>Complete</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", marginBottom: 16, textAlign: "center" }}>
+                    {ex.detail && /second|minute/i.test(ex.detail) ? (
+                      <button onClick={() => startDurationTimer(ex)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 10, padding: "11px 0", fontSize: 13, fontWeight: 600 }}>
+                        <Play size={13} /> Start timer
+                      </button>
+                    ) : (
+                      <button onClick={() => showXp(10)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 10, padding: "11px 0", fontSize: 13, fontWeight: 600 }}>
+                        <Check size={13} /> Mark complete
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {timer !== null && (
+                  <div style={{ background: theme.surface, border: `1px solid ${theme.lime}`, borderRadius: 12, padding: "16px", marginBottom: 16, textAlign: "center" }}>
+                    <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 4 }}>{timerLabel === "Rest" ? "Rest" : timerLabel}</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 32, color: theme.lime, marginBottom: 10 }}>{timer}</div>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                      {timerLabel === "Rest" && (
+                        <button onClick={() => setTimer((t) => (t !== null ? t + 15 : 15))} style={{ border: `1px solid ${theme.border}`, background: "transparent", color: theme.text, borderRadius: 8, padding: "6px 12px", fontSize: 11 }}>+15 sec</button>
+                      )}
+                      <button onClick={() => setTimer(null)} style={{ border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, borderRadius: 8, padding: "6px 12px", fontSize: 11 }}>Skip</button>
+                    </div>
+                  </div>
+                )}
+
+                {[
+                  { key: "benefits", label: "Benefits", items: detail.benefits },
+                  { key: "steps", label: "How to do it", items: detail.steps, numbered: true, alwaysOpen: true },
+                  { key: "mistakes", label: "Common mistakes", items: detail.mistakes },
+                ].map((section) => (
+                  <div key={section.key} style={{ marginBottom: 10 }}>
+                    <button
+                      onClick={() => !section.alwaysOpen && setExpandedSections((s) => ({ ...s, [section.key]: !s[section.key] }))}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px" }}
+                    >
+                      <span style={{ fontSize: 12.5, color: theme.text, fontWeight: 500 }}>{section.label}</span>
+                      {!section.alwaysOpen && <ChevronRight size={14} color={theme.muted} style={{ transform: expandedSections[section.key] ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />}
+                    </button>
+                    {(section.alwaysOpen || expandedSections[section.key]) && (
+                      <div style={{ padding: "10px 14px 4px" }}>
+                        {section.items.map((item, i) => (
+                          <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8, fontSize: 12, color: theme.muted, lineHeight: 1.5 }}>
+                            <span style={{ color: theme.lime, flexShrink: 0 }}>{section.numbered ? `${i + 1}.` : "•"}</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div style={{ marginBottom: 4 }}>
+                  <button
+                    onClick={() => setExpandedSections((s) => ({ ...s, alternatives: !s.alternatives }))}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px" }}
+                  >
+                    <span style={{ fontSize: 12.5, color: theme.text, fontWeight: 500 }}>Alternatives</span>
+                    <ChevronRight size={14} color={theme.muted} style={{ transform: expandedSections.alternatives ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+                  </button>
+                  {expandedSections.alternatives && (
+                    <div style={{ padding: "10px 14px 4px", fontSize: 12, color: theme.muted, lineHeight: 1.7 }}>
+                      <div><strong style={{ color: theme.text }}>Too hard?</strong> {detail.alternatives.easier}</div>
+                      <div><strong style={{ color: theme.text }}>Want more?</strong> {detail.alternatives.harder}</div>
+                      <div><strong style={{ color: theme.text }}>No equipment?</strong> {detail.alternatives.noEquipment}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ padding: "14px 22px 20px", display: "flex", gap: 10 }}>
+                {activeSession.index > 0 && (
+                  <button onClick={prevExercise} style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, fontSize: 14 }}>Back</button>
+                )}
+                {!isLast ? (
+                  <button onClick={nextExercise} style={{ flex: 2, padding: "14px 0", borderRadius: 12, border: "none", background: theme.lime, color: "#12211D", fontSize: 14, fontWeight: 600 }}>Next exercise</button>
+                ) : (
+                  <button onClick={finishSession} style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "14px 0", borderRadius: 12, border: "none", background: theme.lime, color: "#12211D", fontSize: 14, fontWeight: 600 }}>
+                    <Check size={16} /> Finish workout
+                  </button>
+                )}
               </div>
             </div>
+          );
+        })()}
 
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-              {activeSession.index > 0 && (
-                <button
-                  onClick={prevExercise}
-                  style={{ flex: 1, padding: "14px 0", borderRadius: 12, border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, fontSize: 14 }}
-                >
-                  Back
-                </button>
-              )}
-              {activeSession.index < activeSession.list.length - 1 ? (
-                <button
-                  onClick={nextExercise}
-                  style={{ flex: 2, padding: "14px 0", borderRadius: 12, border: "none", background: theme.lime, color: "#12211D", fontSize: 14, fontWeight: 600 }}
-                >
-                  Next exercise
-                </button>
-              ) : (
-                <button
-                  onClick={finishSession}
-                  style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "14px 0", borderRadius: 12, border: "none", background: theme.lime, color: "#12211D", fontSize: 14, fontWeight: 600 }}
-                >
-                  <Check size={16} /> Finish workout
-                </button>
-              )}
-            </div>
+        {recordToast && (
+          <div style={{ position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)", background: theme.coral, color: "#12211D", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 20, boxShadow: "0 6px 16px rgba(0,0,0,0.4)", zIndex: 35, whiteSpace: "nowrap" }}>
+            🔥 {recordToast}
           </div>
         )}
 
