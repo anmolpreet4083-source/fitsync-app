@@ -549,6 +549,44 @@ function Chip({ label, active, onClick }) {
   );
 }
 
+const POSES = {
+  standing: { head: { cx: 50, cy: 20, r: 8 }, lines: [[50,28,50,60],[50,35,30,50],[50,35,70,50],[50,60,35,90],[50,60,65,90]] },
+  squat: { head: { cx: 50, cy: 25, r: 8 }, lines: [[50,33,50,58],[50,38,25,38],[50,38,75,38],[50,58,30,68],[30,68,25,90],[50,58,70,68],[70,68,75,90]] },
+  press: { head: { cx: 50, cy: 25, r: 8 }, lines: [[50,33,50,65],[50,38,30,15],[50,38,70,15],[50,65,38,90],[50,65,62,90]] },
+  raise: { head: { cx: 50, cy: 22, r: 8 }, lines: [[50,30,50,60],[50,35,20,35],[50,35,80,35],[50,60,38,90],[50,60,62,90]] },
+  pull: { head: { cx: 45, cy: 30, r: 8 }, lines: [[45,38,60,60],[50,45,30,50],[55,50,35,55],[60,60,50,90],[60,60,70,90]] },
+  push: { head: { cx: 20, cy: 50, r: 7 }, lines: [[27,50,90,50],[35,50,35,70],[55,50,55,70]] },
+  lunge: { head: { cx: 50, cy: 22, r: 8 }, lines: [[50,30,55,58],[50,35,35,45],[55,35,70,30],[55,58,40,70],[40,70,40,90],[55,58,75,75],[75,75,85,90]] },
+  hinge: { head: { cx: 40, cy: 30, r: 8 }, lines: [[40,38,65,55],[45,42,40,65],[50,45,45,68],[65,55,55,90],[65,55,75,90]] },
+  curl: { head: { cx: 50, cy: 22, r: 8 }, lines: [[50,30,50,60],[50,35,65,40],[65,40,60,25],[50,35,35,50],[50,60,38,90],[50,60,62,90]] },
+  cardio: { head: { cx: 45, cy: 20, r: 8 }, lines: [[45,28,55,55],[50,32,65,25],[50,35,35,45],[55,55,40,60],[40,60,35,45],[55,55,70,80],[70,80,80,90]] },
+  mobility: { head: { cx: 30, cy: 55, r: 7 }, lines: [[35,60,55,75],[35,62,15,68],[40,65,20,72],[55,75,85,78]] },
+};
+
+function PoseIcon({ family, color, size = 44 }) {
+  const poseKey =
+    family === "squat" || family === "calf" ? "squat" :
+    family === "press" ? "press" :
+    family === "raise" ? "raise" :
+    family === "pull" ? "pull" :
+    family === "push" || family === "core" ? "push" :
+    family === "lunge" ? "lunge" :
+    family === "hinge" ? "hinge" :
+    family === "curl" || family === "triceps" ? "curl" :
+    family === "cardio" ? "cardio" :
+    family === "mobility" ? "mobility" :
+    "standing";
+  const pose = POSES[poseKey];
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+      <circle cx={pose.head.cx} cy={pose.head.cy} r={pose.head.r} stroke={color} strokeWidth={5} />
+      {pose.lines.map((l, i) => (
+        <line key={i} x1={l[0]} y1={l[1]} x2={l[2]} y2={l[3]} stroke={color} strokeWidth={5} strokeLinecap="round" />
+      ))}
+    </svg>
+  );
+}
+
 function WorkoutCard({ w, onStart, recommended }) {
   const Icon = w.type === "Recovery" ? Leaf : Dumbbell;
   return (
@@ -1795,8 +1833,8 @@ export default function FitSyncPrototype() {
 
               <div style={{ flex: 1, overflowY: "auto", padding: "0 22px 20px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14 }}>
-                  <div style={{ width: 60, height: 60, borderRadius: 14, background: theme.surface, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <Dumbbell size={26} color={theme.lime} />
+                  <div style={{ width: 68, height: 68, borderRadius: 14, background: theme.surface, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <PoseIcon family={detectFamily(ex.name)} color={theme.lime} size={44} />
                   </div>
                   <div>
                     <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 19, fontWeight: 700, color: theme.text, lineHeight: 1.2, marginBottom: 3 }}>{ex.name}</div>
