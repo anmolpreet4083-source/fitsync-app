@@ -475,6 +475,17 @@ function parseDurationSeconds(detail) {
   return 45;
 }
 
+const STORAGE_KEY = "fitsync_data_v1";
+
+function loadSaved() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
 function scoreWorkout(w, profile) {
   let score = 0;
   if (profile.goal && w.goal === profile.goal) score += 2;
@@ -501,6 +512,36 @@ function Ring({ percent, size = 108, stroke = 10 }) {
         strokeDasharray={c}
         strokeDashoffset={c - (clamped / 100) * c}
         style={{ transition: "stroke-dashoffset 0.6s ease" }}
+      />
+    </svg>
+  );
+}
+
+function GradientRing({ percent, size = 168, stroke = 14, gradFrom, gradTo, id }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.min(Math.max(percent, 0), 100);
+  const gradId = `grad-${id}`;
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", filter: `drop-shadow(0 0 18px ${gradTo}66)` }}>
+      <defs>
+        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={gradFrom} />
+          <stop offset="100%" stopColor={gradTo} />
+        </linearGradient>
+      </defs>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={theme.surfaceAlt} strokeWidth={stroke} />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={`url(#${gradId})`}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={c - (clamped / 100) * c}
+        style={{ transition: "stroke-dashoffset 0.8s ease" }}
       />
     </svg>
   );
@@ -658,12 +699,13 @@ function WorkoutCard({ w, onStart, recommended }) {
 }
 
 export default function FitSyncPrototype() {
-  const [onboarded, setOnboarded] = useState(false);
+  const saved = useMemo(() => loadSaved(), []);
+  const [onboarded, setOnboarded] = useState(saved.onboarded ?? false);
   const [onboardStep, setOnboardStep] = useState(1);
-  const [profile, setProfile] = useState({ goal: null, experience: null, equipment: null, cycleAware: false, cycleStartDate: "", cycleLength: 28 });
+  const [profile, setProfile] = useState(saved.profile ?? { goal: null, experience: null, equipment: null, cycleAware: false, cycleStartDate: "", cycleLength: 28 });
 
   const [activeScreen, setActiveScreen] = useState("home");
-  const [log, setLog] = useState(initialLog);
+  const [log, setLog] = useState(saved.log ?? initialLog);
   const [showAddFood, setShowAddFood] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedFood, setSelectedFood] = useState(null);
@@ -671,14 +713,14 @@ export default function FitSyncPrototype() {
   const [targetMeal, setTargetMeal] = useState(inferMealFromTime());
   const [activeTab, setActiveTab] = useState("search");
   const [justAddedId, setJustAddedId] = useState(null);
-  const [workoutDone, setWorkoutDone] = useState(true);
+  const [workoutDone, setWorkoutDone] = useState(saved.workoutDone ?? true);
   const [generatedWorkout, setGeneratedWorkout] = useState(null);
   const [workoutTypeFilter, setWorkoutTypeFilter] = useState("All");
-  const [weightHistory, setWeightHistory] = useState(WEIGHT_HISTORY);
-  const [measurementLog, setMeasurementLog] = useState(INITIAL_MEASUREMENTS);
+  const [weightHistory, setWeightHistory] = useState(saved.weightHistory ?? WEIGHT_HISTORY);
+  const [measurementLog, setMeasurementLog] = useState(saved.measurementLog ?? INITIAL_MEASUREMENTS);
   const [measurementForm, setMeasurementForm] = useState({ waist: "", hips: "", chest: "", arms: "" });
-  const [photos, setPhotos] = useState([]);
-  const [streak, setStreak] = useState(4);
+  const [photos, setPhotos] = useState(saved.photos ?? []);
+  const [streak, setStreak] = useState(saved.streak ?? 4);
   const [workoutFeedback, setWorkoutFeedback] = useState(null);
   const [measurementError, setMeasurementError] = useState("");
   const [xpToast, setXpToast] = useState(null);
@@ -687,22 +729,38 @@ export default function FitSyncPrototype() {
   const [timer, setTimer] = useState(null);
   const [timerLabel, setTimerLabel] = useState("");
   const [expandedSections, setExpandedSections] = useState({ benefits: false, mistakes: false, alternatives: false });
-  const [exerciseHistory, setExerciseHistory] = useState({});
+  const [exerciseHistory, setExerciseHistory] = useState(saved.exerciseHistory ?? {});
   const [recordToast, setRecordToast] = useState(null);
   const [nutritionTab, setNutritionTab] = useState("today");
   const [selectedCuisine, setSelectedCuisine] = useState(null);
   const [dietaryPrefs, setDietaryPrefs] = useState([]);
-  const [myRecipes, setMyRecipes] = useState([]);
+  const [myRecipes, setMyRecipes] = useState(saved.myRecipes ?? []);
   const [recipeName, setRecipeName] = useState("");
   const [recipeServings, setRecipeServings] = useState(4);
   const [recipeIngredients, setRecipeIngredients] = useState([]);
   const [recipeIngredientPick, setRecipeIngredientPick] = useState(FOOD_DB[0].id);
   const [showRecipeBuilder, setShowRecipeBuilder] = useState(false);
   const [mealSuggestions, setMealSuggestions] = useState(null);
+  const [progressTab, setProgressTab] = useState("overview");
+  const [goalWeight, setGoalWeight] = useState(saved.goalWeight ?? null);
+  const [goalWeightInput, setGoalWeightInput] = useState("");
+  const [prCount, setPrCount] = useState(saved.prCount ?? 0);
+  const [timeline, setTimeline] = useState(() => (saved.timeline ? saved.timeline.map((t) => ({ ...t, Icon: Award })) : []));
+  const [xpLedger, setXpLedger] = useState(saved.xpLedger ?? [{ type: "seed", amount: 210, ts: Date.now() }]);
+  const [lastWorkoutType, setLastWorkoutType] = useState(null);
+
+  function addTimelineEvent(Icon, text, type) {
+    setTimeline((prev) => [{ id: Date.now() + Math.random(), Icon, text, type: type || "other", ts: Date.now(), time: new Date().toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) }, ...prev].slice(0, 40));
+  }
 
   function showXp(amount) {
     setXpToast(amount);
     setTimeout(() => setXpToast(null), 1600);
+  }
+
+  function awardXp(amount, type) {
+    setXpLedger((prev) => [...prev, { type, amount, ts: Date.now() }]);
+    showXp(amount);
   }
 
   useEffect(() => {
@@ -771,7 +829,7 @@ export default function FitSyncPrototype() {
     setSelectedFood(null);
     setQty(1);
     setQuery("");
-    showXp(10);
+    awardXp(10, "food_logged");
   }
 
   function removeEntry(logId) {
@@ -782,7 +840,7 @@ export default function FitSyncPrototype() {
     setLog((prev) => [...prev, { logId: `${Date.now()}`, meal: targetMeal, food, qty: 1 }]);
     setJustAddedId(food.id);
     setTimeout(() => setJustAddedId(null), 900);
-    showXp(10);
+    awardXp(10, "food_logged");
   }
 
   const quickAddFoods = useMemo(() => getQuickAddFoods(log), [log]);
@@ -810,7 +868,8 @@ export default function FitSyncPrototype() {
     const next = Math.round((last.value - 0.1) * 10) / 10;
     setWeightHistory((prev) => [...prev, { label: `W${prev.length + 1}`, value: next }]);
     setStreak((s) => s + 1);
-    showXp(15);
+    awardXp(15, "weight_logged");
+    addTimelineEvent(Scale, `Logged weight: ${next} kg`, "weight");
   }
 
   function logMeasurements() {
@@ -828,14 +887,15 @@ export default function FitSyncPrototype() {
     setStreak((s) => s + 1);
     setMeasurementError("saved");
     setTimeout(() => setMeasurementError(""), 2000);
-    showXp(15);
+    awardXp(15, "measurement_logged");
+    addTimelineEvent(Ruler, "Logged new measurements", "measurement");
   }
 
   function startWorkout(name) {
     setWorkoutDone(true);
     setWorkoutFeedback(name);
     setTimeout(() => setWorkoutFeedback(null), 2500);
-    showXp(30);
+    awardXp(30, "workout_quick");
   }
 
   function openSession(workout) {
@@ -860,7 +920,9 @@ export default function FitSyncPrototype() {
     setWorkoutDone(true);
     setWorkoutFeedback(activeSession.workout.name);
     setTimeout(() => setWorkoutFeedback(null), 2500);
-    showXp(30);
+    awardXp(30, "workout_completed");
+    setLastWorkoutType(activeSession.workout.type);
+    addTimelineEvent(Dumbbell, `Completed ${activeSession.workout.name}`, "workout");
     setActiveSession(null);
   }
 
@@ -881,7 +943,7 @@ export default function FitSyncPrototype() {
       next[i] = { ...next[i], done: true };
       return next;
     });
-    showXp(5);
+    awardXp(5, "set_completed");
     if (i < currentSets.length - 1) {
       setTimer(60);
       setTimerLabel("Rest");
@@ -898,7 +960,9 @@ export default function FitSyncPrototype() {
       setRecordToast(prevBest ? `New record on ${name}!` : null);
       if (prevBest) {
         setTimeout(() => setRecordToast(null), 2200);
-        showXp(20);
+        awardXp(20, "pr");
+        setPrCount((p) => p + 1);
+        addTimelineEvent(Award, `New PR: ${name} — ${set.weight}kg × ${set.reps}`, "pr");
       }
     }
     setExerciseHistory((prev) => ({ ...prev, [name]: { weight: set.weight, reps: set.reps } }));
@@ -961,7 +1025,7 @@ export default function FitSyncPrototype() {
     setRecipeServings(4);
     setRecipeIngredients([]);
     setShowRecipeBuilder(false);
-    showXp(15);
+    awardXp(15, "recipe_saved");
   }
 
   function addRecipeServingToLog(recipe) {
@@ -974,7 +1038,7 @@ export default function FitSyncPrototype() {
         qty: 1,
       },
     ]);
-    showXp(10);
+    awardXp(10, "recipe_logged");
   }
 
   function buildMealSuggestions() {
@@ -999,11 +1063,49 @@ export default function FitSyncPrototype() {
     return { icon: Droplet, color: theme.sky, label: "Hydration", text: "Keep sipping water through the rest of the day — you're doing well overall." };
   }
 
+  const fitsyncScore = useMemo(() => {
+    const training = workoutDone ? 90 : 55;
+    const nutrition = Math.min(100, Math.round((proteinConsumed / TARGETS.protein) * 100));
+    const consistency = Math.min(100, streak * 12);
+    const recovery = lastWorkoutType === "Recovery" ? 90 : 72;
+    const overall = Math.round((training + nutrition + consistency + recovery) / 4);
+    return { overall, training, nutrition, consistency, recovery };
+  }, [workoutDone, proteinConsumed, streak, lastWorkoutType]);
+
+  function scoreLabel(score) {
+    if (score >= 80) return { text: "GREAT WEEK", color: theme.lime };
+    if (score >= 60) return { text: "GOOD PROGRESS", color: theme.sky };
+    return { text: "KEEP GOING", color: theme.coral };
+  }
+
+  function progressInsight() {
+    const weightChange = weightHistory[weightHistory.length - 1].value - weightHistory[0].value;
+    const weightStable = Math.abs(weightChange) < 0.5;
+    if (weightStable && prCount > 0) {
+      return `Your weight has been fairly stable, but you've set ${prCount} new personal record${prCount > 1 ? "s" : ""} and kept a ${streak}-day streak — real progress isn't only on the scale.`;
+    }
+    if (weightChange > 0 && (profile.goal === "Gain Weight" || profile.goal === "Build Muscle")) {
+      return `You're up ${weightChange.toFixed(1)}kg since you started, which lines up with your ${profile.goal.toLowerCase()} goal. Keep your protein consistent to support it.`;
+    }
+    if (weightChange < 0 && profile.goal === "Lose Fat") {
+      return `You're down ${Math.abs(weightChange).toFixed(1)}kg since you started — trending the right way for your goal.`;
+    }
+    if (streak >= 5) {
+      return `Your ${streak}-day streak is the standout this week — consistency like this compounds more than any single workout.`;
+    }
+    return "Keep logging — the more data FITSYNC has, the more specific this analysis gets.";
+  }
+
   function handlePhotoUpload(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPhotos((prev) => [...prev, { id: Date.now(), url, date: new Date().toLocaleDateString() }]);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhotos((prev) => [...prev, { id: Date.now(), url: reader.result, date: new Date().toLocaleDateString() }]);
+      addTimelineEvent(Image, "Added a progress photo", "photo");
+      awardXp(10, "photo_added");
+    };
+    reader.readAsDataURL(file);
     e.target.value = "";
   }
 
@@ -1039,9 +1141,39 @@ export default function FitSyncPrototype() {
   const recommendedIds = new Set(recommended.map((w) => w.id));
   const rest = rankedWorkouts.filter((w) => !recommendedIds.has(w.id));
 
-  const xp = streak * 15 + (workoutDone ? 30 : 0) + log.length * 10 + measurementLog.length * 15 + weightHistory.length * 5;
+  const xp = useMemo(() => xpLedger.reduce((sum, e) => sum + e.amount, 0), [xpLedger]);
   const level = Math.floor(xp / 150) + 1;
   const xpIntoLevel = xp % 150;
+
+  const workoutsThisWeek = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return timeline.filter((t) => t.type === "workout" && t.ts >= weekAgo).length;
+  }, [timeline]);
+
+  useEffect(() => {
+    if (!onboarded) return;
+    try {
+      const toSave = {
+        onboarded,
+        profile,
+        log,
+        workoutDone,
+        weightHistory,
+        measurementLog,
+        photos,
+        streak,
+        exerciseHistory,
+        myRecipes,
+        goalWeight,
+        prCount,
+        timeline: timeline.map((t) => ({ id: t.id, text: t.text, type: t.type, ts: t.ts, time: t.time })),
+        xpLedger,
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      // storage full or unavailable — fail silently, app still works in-memory
+    }
+  }, [onboarded, profile, log, workoutDone, weightHistory, measurementLog, photos, streak, exerciseHistory, myRecipes, goalWeight, prCount, timeline, xpLedger]);
 
   const badges = [
     { id: 1, name: "First Workout", unlocked: workoutDone, icon: Dumbbell },
@@ -1920,186 +2052,392 @@ export default function FitSyncPrototype() {
 
           {activeScreen === "progress" && (
             <>
-              <ScreenHeader title="Progress" subtitle="Weight, measurements, photos & achievements" />
+              <ScreenHeader title="Progress" subtitle={`${getGreeting()}, your fitness journey`} />
 
-              <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
-                    <Flame size={16} color={theme.coral} />
-                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, color: theme.text }}>{streak}</span>
-                  </div>
-                  <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase", letterSpacing: 1 }}>Day streak</div>
-                </div>
-                <div style={{ width: 1, height: 34, background: theme.border }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 11, color: theme.text }}>Level {level}</span>
-                    <span style={{ fontSize: 10, color: theme.muted }}>{xpIntoLevel}/150 XP</span>
-                  </div>
-                  <div style={{ height: 6, borderRadius: 4, background: theme.surfaceAlt, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${(xpIntoLevel / 150) * 100}%`, background: theme.lime, borderRadius: 4 }} />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Today's challenges</div>
-              <div style={{ marginBottom: 20 }}>
-                {challenges.map((c) => (
-                  <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px 12px", marginBottom: 6 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1.5px solid ${c.done ? theme.lime : theme.muted}`, background: c.done ? theme.lime : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {c.done && <Check size={11} color="#12211D" />}
-                    </div>
-                    <span style={{ fontSize: 12.5, color: c.done ? theme.muted : theme.text, textDecoration: c.done ? "line-through" : "none", flex: 1 }}>{c.label}</span>
-                    <span style={{ fontSize: 10, color: theme.lime, fontFamily: "'IBM Plex Mono', monospace" }}>+{c.xpReward}xp</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Weight</div>
-              <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "16px 14px", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 24, color: theme.text }}>{weightHistory[weightHistory.length - 1].value}</span>
-                  <span style={{ fontSize: 12, color: theme.muted }}>kg</span>
-                  <span style={{ fontSize: 11, color: theme.lime, marginLeft: "auto" }}>
-                    {(weightHistory[weightHistory.length - 1].value - weightHistory[0].value).toFixed(1)} kg since W1
-                  </span>
-                </div>
-                <svg viewBox="0 0 300 100" width="100%" height="100">
-                  {(() => {
-                    const vals = weightHistory.map((w) => w.value);
-                    const min = Math.min(...vals);
-                    const max = Math.max(...vals);
-                    const range = max - min || 1;
-                    const points = weightHistory.map((w, i) => {
-                      const x = (i / (weightHistory.length - 1)) * 280 + 10;
-                      const y = 90 - ((w.value - min) / range) * 70;
-                      return `${x},${y}`;
-                    });
-                    return (
-                      <>
-                        <polyline points={points.join(" ")} fill="none" stroke={theme.lime} strokeWidth="2.5" />
-                        {points.map((p, i) => {
-                          const [x, y] = p.split(",");
-                          return <circle key={i} cx={x} cy={y} r="3" fill={theme.lime} />;
-                        })}
-                      </>
-                    );
-                  })()}
-                </svg>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  {weightHistory.map((w) => (
-                    <span key={w.label} style={{ fontSize: 9, color: theme.muted }}>{w.label}</span>
-                  ))}
-                </div>
-              </div>
-              <button
-                onClick={logWeight}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                  background: "transparent",
-                  border: `1px solid ${theme.border}`,
-                  color: theme.text,
-                  borderRadius: 10,
-                  padding: "11px 0",
-                  fontSize: 13,
-                  width: "100%",
-                  marginBottom: 20,
-                }}
-              >
-                <Scale size={15} /> Log today's weight
-              </button>
-
-              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Measurements</div>
-              <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", marginBottom: 12 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
-                  {[
-                    ["Waist", latestMeasurement.waist, baselineMeasurement.waist],
-                    ["Hips", latestMeasurement.hips, baselineMeasurement.hips],
-                    ["Chest", latestMeasurement.chest, baselineMeasurement.chest],
-                    ["Arms", latestMeasurement.arms, baselineMeasurement.arms],
-                  ].map(([label, val, base]) => {
-                    const delta = val - base;
-                    return (
-                      <div key={label}>
-                        <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase", letterSpacing: 1 }}>{label}</div>
-                        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 16, color: theme.text }}>{val}</span>
-                          <span style={{ fontSize: 10, color: theme.muted }}>cm</span>
-                          {delta !== 0 && <span style={{ fontSize: 10, color: theme.sky }}>{delta > 0 ? "+" : ""}{delta}</span>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
-                  {["waist", "hips", "chest", "arms"].map((field) => (
-                    <input
-                      key={field}
-                      type="number"
-                      placeholder={`${field[0].toUpperCase()}${field.slice(1)} (cm)`}
-                      value={measurementForm[field]}
-                      onChange={(e) => setMeasurementForm((f) => ({ ...f, [field]: e.target.value }))}
-                      style={{ background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "8px 10px", color: theme.text, fontSize: 12, outline: "none" }}
-                    />
-                  ))}
-                </div>
-                <button
-                  onClick={logMeasurements}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "10px 0", fontSize: 12, fontWeight: 600 }}
-                >
-                  <Ruler size={13} /> Log measurements
-                </button>
-                {measurementError && (
-                  <div style={{ fontSize: 11, color: measurementError === "saved" ? theme.lime : theme.coral, marginTop: 8, textAlign: "center" }}>
-                    {measurementError === "saved" ? "✓ Measurements saved" : measurementError}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8, marginTop: 8 }}>Progress photos</div>
-              <div style={{ marginBottom: 20 }}>
-                {photos.length === 0 ? (
-                  <div style={{ fontSize: 12, color: theme.muted, marginBottom: 10 }}>No photos yet — add your first to start tracking visually.</div>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 10 }}>
-                    {photos.map((p) => (
-                      <img key={p.id} src={p.url} alt="Progress" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8, border: `1px solid ${theme.border}` }} />
-                    ))}
-                  </div>
-                )}
-                <label
-                  htmlFor="photo-upload"
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 0", fontSize: 13, color: theme.text, cursor: "pointer" }}
-                >
-                  <Image size={15} /> Add photo
-                </label>
-                <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: "none" }} />
-              </div>
-
-              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Badges</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {badges.map((b) => (
-                  <div
-                    key={b.id}
+              <div style={{ display: "flex", gap: 5, marginBottom: 16, overflowX: "auto" }}>
+                {[
+                  { key: "overview", label: "Overview" },
+                  { key: "body", label: "Body" },
+                  { key: "strength", label: "Strength" },
+                  { key: "journey", label: "Journey" },
+                ].map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setProgressTab(t.key)}
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      background: theme.surface,
-                      border: `1px solid ${b.unlocked ? theme.lime : theme.border}`,
-                      borderRadius: 10,
-                      padding: "10px 12px",
-                      opacity: b.unlocked ? 1 : 0.45,
+                      flexShrink: 0,
+                      padding: "8px 13px",
+                      borderRadius: 9,
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      border: `1px solid ${progressTab === t.key ? theme.lime : theme.border}`,
+                      background: progressTab === t.key ? "rgba(201,240,101,0.1)" : "transparent",
+                      color: progressTab === t.key ? theme.lime : theme.muted,
                     }}
                   >
-                    <b.icon size={15} color={b.unlocked ? theme.lime : theme.muted} />
-                    <span style={{ fontSize: 11, color: theme.text }}>{b.name}</span>
-                  </div>
+                    {t.label}
+                  </button>
                 ))}
               </div>
+
+              {progressTab === "overview" && (
+                <>
+                  <div
+                    style={{
+                      position: "relative",
+                      overflow: "hidden",
+                      background: `radial-gradient(circle at 15% 0%, rgba(179,157,255,0.18), transparent 60%), ${theme.surface}`,
+                      border: `1px solid ${theme.border}`,
+                      borderRadius: 16,
+                      padding: "16px 18px",
+                      marginBottom: 14,
+                    }}
+                  >
+                    <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.purple, textTransform: "uppercase", marginBottom: 6, fontWeight: 600 }}>Your Fitness Journey</div>
+                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, color: theme.text, fontWeight: 700, marginBottom: 12 }}>{profile.goal || "Goal not set"}</div>
+                    {goalWeight ? (
+                      <>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                          <span style={{ fontSize: 10.5, color: theme.muted }}>{weightHistory[0].value} kg start</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, color: theme.purple, fontWeight: 600 }}>
+                            {Math.round(Math.min(100, Math.max(0, Math.abs((weightHistory[weightHistory.length - 1].value - weightHistory[0].value) / (goalWeight - weightHistory[0].value)) * 100)))}%
+                          </span>
+                          <span style={{ fontSize: 10.5, color: theme.muted }}>{goalWeight} kg goal</span>
+                        </div>
+                        <div style={{ height: 8, borderRadius: 5, background: theme.surfaceAlt, overflow: "hidden" }}>
+                          <div
+                            style={{
+                              height: "100%",
+                              borderRadius: 5,
+                              background: `linear-gradient(90deg, ${theme.purple}, ${theme.sky})`,
+                              boxShadow: `0 0 10px ${theme.purple}88`,
+                              width: `${Math.min(100, Math.max(0, Math.abs((weightHistory[weightHistory.length - 1].value - weightHistory[0].value) / (goalWeight - weightHistory[0].value)) * 100))}%`,
+                              transition: "width 0.6s ease",
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 12, color: theme.muted }}>Set a goal weight in the Body tab to see your journey progress here.</div>
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      position: "relative",
+                      overflow: "hidden",
+                      background: `radial-gradient(circle at 50% -10%, rgba(201,240,101,0.14), transparent 55%), ${theme.surface}`,
+                      border: `1px solid ${theme.lime}55`,
+                      boxShadow: `0 0 24px rgba(201,240,101,0.08)`,
+                      borderRadius: 18,
+                      padding: "22px 18px 18px",
+                      marginBottom: 14,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 12 }}>FitSync Score</div>
+                    <div style={{ position: "relative", width: 168, height: 168, margin: "0 auto 14px" }}>
+                      <GradientRing percent={fitsyncScore.overall} size={168} stroke={14} gradFrom={theme.sky} gradTo={theme.lime} id="score" />
+                      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 44, fontWeight: 700, color: theme.text, lineHeight: 1 }}>{fitsyncScore.overall}</span>
+                        <span style={{ fontSize: 9, color: theme.muted, letterSpacing: 1 }}>OUT OF 100</span>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "inline-block",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        letterSpacing: 0.5,
+                        color: scoreLabel(fitsyncScore.overall).color,
+                        background: `${scoreLabel(fitsyncScore.overall).color}18`,
+                        border: `1px solid ${scoreLabel(fitsyncScore.overall).color}55`,
+                        borderRadius: 20,
+                        padding: "4px 14px",
+                        marginBottom: 18,
+                      }}
+                    >
+                      {scoreLabel(fitsyncScore.overall).text}
+                    </div>
+                    {[
+                      ["Training", fitsyncScore.training, theme.coral],
+                      ["Nutrition", fitsyncScore.nutrition, theme.amber],
+                      ["Consistency", fitsyncScore.consistency, theme.lime],
+                      ["Recovery", fitsyncScore.recovery, theme.sky],
+                    ].map(([label, val, color]) => (
+                      <div key={label} style={{ marginBottom: 9, textAlign: "left" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, color: theme.muted }}>{label}</span>
+                          <span style={{ fontSize: 11, color: theme.text, fontFamily: "'IBM Plex Mono', monospace" }}>{val}%</span>
+                        </div>
+                        <div style={{ height: 6, borderRadius: 3, background: theme.surfaceAlt, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${val}%`, background: `linear-gradient(90deg, ${color}99, ${color})`, borderRadius: 3, boxShadow: `0 0 6px ${color}66`, transition: "width 0.6s ease" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: theme.surface, border: `1px solid ${theme.lime}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+                    <Bot size={16} color={theme.lime} style={{ flexShrink: 0, marginTop: 1 }} />
+                    <div>
+                      <div style={{ fontSize: 10, letterSpacing: 1, color: theme.lime, textTransform: "uppercase", marginBottom: 4 }}>FitSync Analysis</div>
+                      <div style={{ fontSize: 12, color: theme.text, lineHeight: 1.5 }}>{progressInsight()}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase", marginBottom: 4 }}>Weight</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 17, color: theme.text }}>{weightHistory[weightHistory.length - 1].value} kg</div>
+                    </div>
+                    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase", marginBottom: 4 }}>PRs set</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 17, color: theme.text }}>{prCount}</div>
+                    </div>
+                    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase", marginBottom: 4 }}>Workouts this week</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 17, color: theme.text }}>{workoutsThisWeek}</div>
+                    </div>
+                    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                      <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase", marginBottom: 4 }}>Streak</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 17, color: theme.text }}>🔥 {streak}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {progressTab === "body" && (
+                <>
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Goal Weight</div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                    <input
+                      type="number"
+                      value={goalWeightInput}
+                      onChange={(e) => setGoalWeightInput(e.target.value)}
+                      placeholder={goalWeight ? `Current: ${goalWeight}kg` : "e.g. 58"}
+                      style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px 12px", color: theme.text, fontSize: 13, outline: "none" }}
+                    />
+                    <button
+                      onClick={() => { if (goalWeightInput) { setGoalWeight(Number(goalWeightInput)); setGoalWeightInput(""); } }}
+                      style={{ background: theme.purple, color: "#12211D", border: "none", borderRadius: 10, padding: "0 16px", fontSize: 12.5, fontWeight: 600 }}
+                    >
+                      Set
+                    </button>
+                  </div>
+
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Weight</div>
+                  <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "16px 14px", marginBottom: 12 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 24, color: theme.text }}>{weightHistory[weightHistory.length - 1].value}</span>
+                      <span style={{ fontSize: 12, color: theme.muted }}>kg</span>
+                      <span style={{ fontSize: 11, color: theme.lime, marginLeft: "auto" }}>
+                        {(weightHistory[weightHistory.length - 1].value - weightHistory[0].value).toFixed(1)} kg since W1
+                      </span>
+                    </div>
+                    <svg viewBox="0 0 300 100" width="100%" height="100">
+                      {(() => {
+                        const vals = weightHistory.map((w) => w.value);
+                        const min = Math.min(...vals);
+                        const max = Math.max(...vals);
+                        const range = max - min || 1;
+                        const points = weightHistory.map((w, i) => {
+                          const x = (i / (weightHistory.length - 1)) * 280 + 10;
+                          const y = 90 - ((w.value - min) / range) * 70;
+                          return `${x},${y}`;
+                        });
+                        return (
+                          <>
+                            <polyline points={points.join(" ")} fill="none" stroke={theme.lime} strokeWidth="2.5" />
+                            {points.map((p, i) => {
+                              const [x, y] = p.split(",");
+                              return <circle key={i} cx={x} cy={y} r="3" fill={theme.lime} />;
+                            })}
+                          </>
+                        );
+                      })()}
+                    </svg>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      {weightHistory.map((w) => (
+                        <span key={w.label} style={{ fontSize: 9, color: theme.muted }}>{w.label}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={logWeight}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "transparent", border: `1px solid ${theme.border}`, color: theme.text, borderRadius: 10, padding: "11px 0", fontSize: 13, width: "100%", marginBottom: 20 }}
+                  >
+                    <Scale size={15} /> Log today's weight
+                  </button>
+
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Body Change Since Start</div>
+                  <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", marginBottom: 12 }}>
+                    {[
+                      ["Waist", measurementLog[measurementLog.length - 1].waist - measurementLog[0].waist],
+                      ["Hips", measurementLog[measurementLog.length - 1].hips - measurementLog[0].hips],
+                      ["Chest", measurementLog[measurementLog.length - 1].chest - measurementLog[0].chest],
+                      ["Arms", measurementLog[measurementLog.length - 1].arms - measurementLog[0].arms],
+                    ].map(([label, delta]) => (
+                      <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${theme.border}` }}>
+                        <span style={{ fontSize: 12, color: theme.muted }}>{label}</span>
+                        <span style={{ fontSize: 12, color: delta === 0 ? theme.muted : theme.sky, fontFamily: "'IBM Plex Mono', monospace" }}>{delta > 0 ? "+" : ""}{delta} cm</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", marginBottom: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                      {["waist", "hips", "chest", "arms"].map((field) => (
+                        <input
+                          key={field}
+                          type="number"
+                          placeholder={`${field[0].toUpperCase()}${field.slice(1)} (cm)`}
+                          value={measurementForm[field]}
+                          onChange={(e) => setMeasurementForm((f) => ({ ...f, [field]: e.target.value }))}
+                          style={{ background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "8px 10px", color: theme.text, fontSize: 12, outline: "none" }}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      onClick={logMeasurements}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "10px 0", fontSize: 12, fontWeight: 600 }}
+                    >
+                      <Ruler size={13} /> Log measurements
+                    </button>
+                    {measurementError && (
+                      <div style={{ fontSize: 11, color: measurementError === "saved" ? theme.lime : theme.coral, marginTop: 8, textAlign: "center" }}>
+                        {measurementError === "saved" ? "✓ Measurements saved" : measurementError}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Progress Photos</div>
+                  <div>
+                    {photos.length === 0 ? (
+                      <div style={{ fontSize: 12, color: theme.muted, marginBottom: 10 }}>No photos yet — add your first to start tracking visually.</div>
+                    ) : (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 10 }}>
+                        {photos.map((p) => (
+                          <img key={p.id} src={p.url} alt="Progress" style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8, border: `1px solid ${theme.border}` }} />
+                        ))}
+                      </div>
+                    )}
+                    <label htmlFor="photo-upload" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 0", fontSize: 13, color: theme.text, cursor: "pointer" }}>
+                      <Image size={15} /> Add photo
+                    </label>
+                    <input id="photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: "none" }} />
+                  </div>
+                </>
+              )}
+
+              {progressTab === "strength" && (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 18 }}>
+                    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", textAlign: "center" }}>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, color: theme.lime, fontWeight: 700 }}>{prCount}</div>
+                      <div style={{ fontSize: 10, color: theme.muted, textTransform: "uppercase" }}>Total PRs</div>
+                    </div>
+                    <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", textAlign: "center" }}>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, color: theme.text, fontWeight: 700 }}>{Object.keys(exerciseHistory).length}</div>
+                      <div style={{ fontSize: 10, color: theme.muted, textTransform: "uppercase" }}>Exercises tracked</div>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Personal Bests</div>
+                  {Object.keys(exerciseHistory).length === 0 ? (
+                    <div style={{ fontSize: 12, color: theme.muted, padding: "20px 0", textAlign: "center" }}>
+                      Complete a set-based exercise in a workout session to start tracking personal bests here.
+                    </div>
+                  ) : (
+                    Object.entries(exerciseHistory).map(([name, best]) => (
+                      <div key={name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px 12px", marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <PoseIcon family={detectFamily(name)} color={theme.lime} size={26} />
+                          <span style={{ fontSize: 12.5, color: theme.text }}>{name}</span>
+                        </div>
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: theme.lime }}>{best.weight}kg × {best.reps}</span>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {progressTab === "journey" && (
+                <>
+                  <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
+                        <Flame size={16} color={theme.coral} />
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, color: theme.text }}>{streak}</span>
+                      </div>
+                      <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase", letterSpacing: 1 }}>Day streak</div>
+                    </div>
+                    <div style={{ width: 1, height: 34, background: theme.border }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, color: theme.text }}>Level {level}</span>
+                        <span style={{ fontSize: 10, color: theme.muted }}>{xpIntoLevel}/150 XP</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 4, background: theme.surfaceAlt, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${(xpIntoLevel / 150) * 100}%`, background: theme.lime, borderRadius: 4 }} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Today's challenges</div>
+                  <div style={{ marginBottom: 20 }}>
+                    {challenges.map((c) => (
+                      <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px 12px", marginBottom: 6 }}>
+                        <div style={{ width: 18, height: 18, borderRadius: "50%", border: `1.5px solid ${c.done ? theme.lime : theme.muted}`, background: c.done ? theme.lime : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {c.done && <Check size={11} color="#12211D" />}
+                        </div>
+                        <span style={{ fontSize: 12.5, color: c.done ? theme.muted : theme.text, textDecoration: c.done ? "line-through" : "none", flex: 1 }}>{c.label}</span>
+                        <span style={{ fontSize: 10, color: theme.lime, fontFamily: "'IBM Plex Mono', monospace" }}>+{c.xpReward}xp</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Timeline</div>
+                  <div style={{ marginBottom: 20 }}>
+                    {timeline.length === 0 ? (
+                      <div style={{ fontSize: 12, color: theme.muted, padding: "10px 0" }}>Nothing logged yet — complete a workout or log your weight to start your timeline.</div>
+                    ) : (
+                      timeline.map((t) => (
+                        <div key={t.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: theme.surface, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <t.Icon size={13} color={theme.lime} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 12, color: theme.text }}>{t.text}</div>
+                            <div style={{ fontSize: 10, color: theme.muted }}>{t.time}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Badges</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {badges.map((b) => (
+                      <div
+                        key={b.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          background: theme.surface,
+                          border: `1px solid ${b.unlocked ? theme.lime : theme.border}`,
+                          borderRadius: 10,
+                          padding: "10px 12px",
+                          opacity: b.unlocked ? 1 : 0.45,
+                        }}
+                      >
+                        <b.icon size={15} color={b.unlocked ? theme.lime : theme.muted} />
+                        <span style={{ fontSize: 11, color: theme.text }}>{b.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
 
@@ -2262,7 +2600,7 @@ export default function FitSyncPrototype() {
                         <Play size={13} /> Start timer
                       </button>
                     ) : (
-                      <button onClick={() => showXp(10)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 10, padding: "11px 0", fontSize: 13, fontWeight: 600 }}>
+                      <button onClick={() => awardXp(10, "duration_exercise")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.lime, color: "#12211D", border: "none", borderRadius: 10, padding: "11px 0", fontSize: 13, fontWeight: 600 }}>
                         <Check size={13} /> Mark complete
                       </button>
                     )}
