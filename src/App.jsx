@@ -747,6 +747,10 @@ export default function FitSyncPrototype() {
   const [prCount, setPrCount] = useState(saved.prCount ?? 0);
   const [timeline, setTimeline] = useState(() => (saved.timeline ? saved.timeline.map((t) => ({ ...t, Icon: Award })) : []));
   const [xpLedger, setXpLedger] = useState(saved.xpLedger ?? [{ type: "seed", amount: 210, ts: Date.now() }]);
+  const [unlockedAchievementIds, setUnlockedAchievementIds] = useState(saved.unlockedAchievementIds ?? []);
+  const [achievementCelebration, setAchievementCelebration] = useState(null);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [achievementFilter, setAchievementFilter] = useState("All");
   const [lastWorkoutType, setLastWorkoutType] = useState(null);
 
   function addTimelineEvent(Icon, text, type) {
@@ -896,6 +900,7 @@ export default function FitSyncPrototype() {
     setWorkoutFeedback(name);
     setTimeout(() => setWorkoutFeedback(null), 2500);
     awardXp(30, "workout_quick");
+    addTimelineEvent(Dumbbell, `Completed ${name}`, "workout");
   }
 
   function openSession(workout) {
@@ -1168,25 +1173,67 @@ export default function FitSyncPrototype() {
         prCount,
         timeline: timeline.map((t) => ({ id: t.id, text: t.text, type: t.type, ts: t.ts, time: t.time })),
         xpLedger,
+        unlockedAchievementIds,
       };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     } catch (e) {
       // storage full or unavailable — fail silently, app still works in-memory
     }
-  }, [onboarded, profile, log, workoutDone, weightHistory, measurementLog, photos, streak, exerciseHistory, myRecipes, goalWeight, prCount, timeline, xpLedger]);
+  }, [onboarded, profile, log, workoutDone, weightHistory, measurementLog, photos, streak, exerciseHistory, myRecipes, goalWeight, prCount, timeline, xpLedger, unlockedAchievementIds]);
 
-  const badges = [
-    { id: 1, name: "First Workout", unlocked: workoutDone, icon: Dumbbell },
-    { id: 2, name: "7-Day Streak", unlocked: streak >= 7, icon: Flame },
-    { id: 3, name: "10 Meals Logged", unlocked: log.length >= 10, icon: Apple },
-    { id: 4, name: "Goal Set", unlocked: !!profile.goal, icon: Target },
-    { id: 5, name: "Consistency", unlocked: streak >= 3, icon: Check },
-    { id: 6, name: "Progress Tracked", unlocked: measurementLog.length >= 2 || photos.length >= 1, icon: Ruler },
-    { id: 7, name: "Level 3", unlocked: level >= 3, icon: Award },
-    { id: 8, name: "30-Day Streak", unlocked: streak >= 30, icon: Sparkles },
-    { id: 9, name: "First Photo", unlocked: photos.length >= 1, icon: Image },
-    { id: 10, name: "Recovery Fan", unlocked: workoutTypeFilter === "Recovery", icon: Leaf },
-  ];
+  const totalWorkouts = useMemo(() => timeline.filter((t) => t.type === "workout").length, [timeline]);
+  const homeWorkouts = useMemo(() => timeline.filter((t) => t.type === "workout" && t.text.toLowerCase().includes("home")).length, [timeline]);
+  const distinctWorkoutNames = useMemo(() => new Set(timeline.filter((t) => t.type === "workout").map((t) => t.text)).size, [timeline]);
+  const cuisinesExplored = useMemo(() => new Set(log.map((e) => e.food.cuisine).filter(Boolean)).size, [log]);
+  const realWeightLogs = Math.max(0, weightHistory.length - 6);
+  const realMeasurementLogs = Math.max(0, measurementLog.length - 1);
+  const earlyBirdDone = useMemo(() => timeline.some((t) => t.type === "workout" && new Date(t.ts).getHours() < 8), [timeline]);
+  const nightOwlDone = useMemo(() => timeline.some((t) => t.type === "workout" && new Date(t.ts).getHours() >= 21), [timeline]);
+
+  const ACHIEVEMENTS_LIST = useMemo(
+    () => [
+      { id: "a1", category: "Training", name: "First Rep", desc: "Complete your first workout", icon: Dumbbell, current: totalWorkouts, target: 1, xp: 30 },
+      { id: "a2", category: "Training", name: "Getting Started", desc: "Complete 5 workouts", icon: Dumbbell, current: totalWorkouts, target: 5, xp: 40 },
+      { id: "a3", category: "Training", name: "Gym Regular", desc: "Complete 25 workouts", icon: Dumbbell, current: totalWorkouts, target: 25, xp: 80 },
+      { id: "a4", category: "Training", name: "Home Hero", desc: "Complete 10 workouts at home", icon: HomeIcon, current: homeWorkouts, target: 10, xp: 40 },
+      { id: "a5", category: "Nutrition", name: "First Bite", desc: "Log your first meal", icon: Apple, current: log.length, target: 1, xp: 20 },
+      { id: "a6", category: "Nutrition", name: "Food Tracker", desc: "Log 10 meals", icon: Apple, current: log.length, target: 10, xp: 30 },
+      { id: "a7", category: "Nutrition", name: "World Food Explorer", desc: "Log foods from 5 different cuisines", icon: Globe, current: cuisinesExplored, target: 5, xp: 50 },
+      { id: "a8", category: "Nutrition", name: "Home Chef", desc: "Create your first recipe", icon: ChefHat, current: myRecipes.length, target: 1, xp: 30 },
+      { id: "a9", category: "Consistency", name: "3-Day Spark", desc: "Reach a 3-day streak", icon: Flame, current: streak, target: 3, xp: 20 },
+      { id: "a10", category: "Consistency", name: "7-Day Streak", desc: "Reach a 7-day streak", icon: Flame, current: streak, target: 7, xp: 40 },
+      { id: "a11", category: "Consistency", name: "14-Day Momentum", desc: "Reach a 14-day streak", icon: Flame, current: streak, target: 14, xp: 60 },
+      { id: "a12", category: "Consistency", name: "Unstoppable", desc: "Reach a 30-day streak", icon: Sparkles, current: streak, target: 30, xp: 100 },
+      { id: "a13", category: "Strength", name: "First PR", desc: "Set your first personal record", icon: Award, current: prCount, target: 1, xp: 40 },
+      { id: "a14", category: "Strength", name: "Record Breaker", desc: "Set 5 personal records", icon: Award, current: prCount, target: 5, xp: 70 },
+      { id: "a15", category: "Strength", name: "Exercise Explorer", desc: "Track history for 5 different exercises", icon: Target, current: Object.keys(exerciseHistory).length, target: 5, xp: 40 },
+      { id: "a16", category: "Progress", name: "First Check-In", desc: "Log your weight", icon: Scale, current: realWeightLogs, target: 1, xp: 20 },
+      { id: "a17", category: "Progress", name: "Measure Up", desc: "Log body measurements", icon: Ruler, current: realMeasurementLogs, target: 1, xp: 20 },
+      { id: "a18", category: "Progress", name: "First Snapshot", desc: "Add a progress photo", icon: Image, current: photos.length, target: 1, xp: 30 },
+      { id: "a19", category: "Progress", name: "Goal Setter", desc: "Set a fitness goal", icon: Target, current: profile.goal ? 1 : 0, target: 1, xp: 20 },
+      { id: "a20", category: "Special", name: "Early Bird", desc: "Complete a workout before 8 AM", icon: Sparkles, current: earlyBirdDone ? 1 : 0, target: 1, xp: 30 },
+      { id: "a21", category: "Special", name: "Night Owl", desc: "Complete a workout after 9 PM", icon: Moon, current: nightOwlDone ? 1 : 0, target: 1, xp: 30 },
+      { id: "a22", category: "Special", name: "Workout Explorer", desc: "Try 3 different workouts", icon: Sparkles, current: distinctWorkoutNames, target: 3, xp: 40 },
+    ],
+    [totalWorkouts, homeWorkouts, log, cuisinesExplored, myRecipes, streak, prCount, exerciseHistory, realWeightLogs, realMeasurementLogs, photos, profile.goal, earlyBirdDone, nightOwlDone, distinctWorkoutNames]
+  );
+
+  const achievements = ACHIEVEMENTS_LIST.map((a) => ({ ...a, unlocked: a.current >= a.target }));
+  const unlockedCount = achievements.filter((a) => a.unlocked).length;
+  const featuredAchievements = [...achievements].sort((a, b) => {
+    if (a.unlocked !== b.unlocked) return a.unlocked ? -1 : 1;
+    return b.current / b.target - a.current / a.target;
+  }).slice(0, 3);
+
+  useEffect(() => {
+    const newlyUnlocked = achievements.find((a) => a.unlocked && !unlockedAchievementIds.includes(a.id));
+    if (newlyUnlocked) {
+      setUnlockedAchievementIds((prev) => [...prev, newlyUnlocked.id]);
+      setAchievementCelebration(newlyUnlocked);
+      awardXp(newlyUnlocked.xp, "achievement");
+      setTimeout(() => setAchievementCelebration(null), 3200);
+    }
+  }, [achievements, unlockedAchievementIds]);
 
   const challenges = [
     { id: 1, label: "Log 3 meals today", done: log.length >= 3, xpReward: 20 },
@@ -1457,7 +1504,7 @@ export default function FitSyncPrototype() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 4 }}>
-                  {badges.filter((b) => b.unlocked).slice(0, 3).map((b) => (
+                  {achievements.filter((b) => b.unlocked).slice(0, 3).map((b) => (
                     <div key={b.id} style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(201,240,101,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <b.icon size={12} color={theme.lime} />
                     </div>
@@ -2054,7 +2101,7 @@ export default function FitSyncPrototype() {
             <>
               <ScreenHeader title="Progress" subtitle={`${getGreeting()}, your fitness journey`} />
 
-              <div style={{ display: "flex", gap: 5, marginBottom: 16, overflowX: "auto" }}>
+              <div style={{ display: "flex", gap: 5, marginBottom: 16, flexWrap: "wrap" }}>
                 {[
                   { key: "overview", label: "Overview" },
                   { key: "body", label: "Body" },
@@ -2125,7 +2172,6 @@ export default function FitSyncPrototype() {
                   <div
                     style={{
                       position: "relative",
-                      overflow: "hidden",
                       background: `radial-gradient(circle at 50% -10%, rgba(201,240,101,0.14), transparent 55%), ${theme.surface}`,
                       border: `1px solid ${theme.lime}55`,
                       boxShadow: `0 0 24px rgba(201,240,101,0.08)`,
@@ -2415,27 +2461,43 @@ export default function FitSyncPrototype() {
                     )}
                   </div>
 
-                  <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Badges</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    {badges.map((b) => (
-                      <div
-                        key={b.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          background: theme.surface,
-                          border: `1px solid ${b.unlocked ? theme.lime : theme.border}`,
-                          borderRadius: 10,
-                          padding: "10px 12px",
-                          opacity: b.unlocked ? 1 : 0.45,
-                        }}
-                      >
-                        <b.icon size={15} color={b.unlocked ? theme.lime : theme.muted} />
-                        <span style={{ fontSize: 11, color: theme.text }}>{b.name}</span>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase" }}>Featured Achievements</span>
+                    <span style={{ fontSize: 10.5, color: theme.lime }}>{unlockedCount} unlocked</span>
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    {featuredAchievements.map((a) => (
+                      <div key={a.id} style={{ background: theme.surface, border: `1px solid ${a.unlocked ? theme.lime : theme.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: a.unlocked ? 0 : 8 }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 9, background: a.unlocked ? "rgba(201,240,101,0.12)" : theme.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <a.icon size={15} color={a.unlocked ? theme.lime : theme.muted} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 12.5, color: theme.text, fontWeight: 500 }}>{a.name}</div>
+                            {a.unlocked && <div style={{ fontSize: 10.5, color: theme.muted }}>{a.desc}</div>}
+                          </div>
+                          {a.unlocked && <Check size={16} color={theme.lime} />}
+                        </div>
+                        {!a.unlocked && (
+                          <>
+                            <div style={{ fontSize: 10.5, color: theme.muted, marginBottom: 6 }}>{a.desc}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ flex: 1, height: 5, borderRadius: 3, background: theme.surfaceAlt, overflow: "hidden" }}>
+                                <div style={{ height: "100%", width: `${Math.min(100, (a.current / a.target) * 100)}%`, background: theme.lime, borderRadius: 3 }} />
+                              </div>
+                              <span style={{ fontSize: 10, color: theme.muted, fontFamily: "'IBM Plex Mono', monospace", flexShrink: 0 }}>{a.current}/{a.target}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
+                  <button
+                    onClick={() => setShowAchievements(true)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px solid ${theme.lime}`, color: theme.lime, borderRadius: 10, padding: "11px 0", fontSize: 12.5, fontWeight: 600 }}
+                  >
+                    View all achievements <ChevronRight size={14} />
+                  </button>
                 </>
               )}
             </>
@@ -2683,6 +2745,110 @@ export default function FitSyncPrototype() {
         {recordToast && (
           <div style={{ position: "absolute", top: 70, left: "50%", transform: "translateX(-50%)", background: theme.coral, color: "#12211D", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 20, boxShadow: "0 6px 16px rgba(0,0,0,0.4)", zIndex: 35, whiteSpace: "nowrap" }}>
             🔥 {recordToast}
+          </div>
+        )}
+
+        {showAchievements && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Achievements</span>
+                <button onClick={() => setShowAchievements(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                  <X size={18} color={theme.muted} />
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <div style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px", textAlign: "center" }}>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, color: theme.lime }}>{unlockedCount}</div>
+                  <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase" }}>Unlocked</div>
+                </div>
+                <div style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px", textAlign: "center" }}>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, color: theme.text }}>{achievements.length}</div>
+                  <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase" }}>Total</div>
+                </div>
+                <div style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px", textAlign: "center" }}>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, color: theme.amber }}>
+                    {achievements.filter((a) => a.unlocked).reduce((s, a) => s + a.xp, 0)}
+                  </div>
+                  <div style={{ fontSize: 9, color: theme.muted, textTransform: "uppercase" }}>XP earned</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 5, marginBottom: 14, flexWrap: "wrap" }}>
+                {["All", "Training", "Nutrition", "Consistency", "Strength", "Progress", "Special"].map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setAchievementFilter(c)}
+                    style={{
+                      padding: "6px 11px",
+                      borderRadius: 8,
+                      fontSize: 11,
+                      border: `1px solid ${achievementFilter === c ? theme.lime : theme.border}`,
+                      background: achievementFilter === c ? "rgba(201,240,101,0.08)" : "transparent",
+                      color: achievementFilter === c ? theme.lime : theme.muted,
+                    }}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+              {achievements
+                .filter((a) => achievementFilter === "All" || a.category === achievementFilter)
+                .map((a) => (
+                  <div key={a.id} style={{ background: theme.surface, border: `1px solid ${a.unlocked ? theme.lime : theme.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, opacity: a.unlocked ? 1 : 0.85 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: a.unlocked ? "rgba(201,240,101,0.12)" : theme.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <a.icon size={16} color={a.unlocked ? theme.lime : theme.muted} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, color: theme.text, fontWeight: 500 }}>{a.name}</div>
+                        <div style={{ fontSize: 10.5, color: theme.muted }}>{a.desc}</div>
+                      </div>
+                      {a.unlocked ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, color: theme.lime, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", flexShrink: 0 }}>
+                          <Check size={13} /> +{a.xp}xp
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 10, color: theme.muted, fontFamily: "'IBM Plex Mono', monospace", flexShrink: 0 }}>{a.current}/{a.target}</span>
+                      )}
+                    </div>
+                    {!a.unlocked && (
+                      <div style={{ height: 5, borderRadius: 3, background: theme.surfaceAlt, overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${Math.min(100, (a.current / a.target) * 100)}%`, background: theme.lime, borderRadius: 3 }} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {achievementCelebration && (
+          <div
+            style={{
+              position: "absolute",
+              top: 60,
+              left: 16,
+              right: 16,
+              zIndex: 40,
+              background: theme.surface,
+              border: `1px solid ${theme.lime}`,
+              boxShadow: `0 8px 24px rgba(201,240,101,0.2)`,
+              borderRadius: 14,
+              padding: "14px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(201,240,101,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <achievementCelebration.icon size={20} color={theme.lime} />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.lime, textTransform: "uppercase", fontWeight: 600 }}>Achievement Unlocked</div>
+              <div style={{ fontSize: 13, color: theme.text, fontWeight: 600 }}>{achievementCelebration.name} · +{achievementCelebration.xp} XP</div>
+            </div>
           </div>
         )}
 
