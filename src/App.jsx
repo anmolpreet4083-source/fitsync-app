@@ -32,6 +32,7 @@ import {
   Bot,
   Globe,
   ChefHat,
+  Heart,
 } from "lucide-react";
 
 const theme = {
@@ -104,7 +105,7 @@ const initialLog = [
   { logId: "a8", meal: "Dinner", food: FOOD_DB[4], qty: 2 },
 ];
 
-const TARGETS = { kcal: 2200, protein: 120, carbs: 250, fat: 70, fiber: 28, water: 2.5, steps: 10000 };
+const DEFAULT_TARGETS = { kcal: 2200, protein: 120, carbs: 250, fat: 70, fiber: 28, water: 2.5, steps: 10000 };
 
 const GOALS = ["Lose Fat", "Build Muscle", "Gain Weight", "Tone & Sculpt", "Get Stronger", "General Fitness"];
 const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced"];
@@ -660,7 +661,7 @@ function PoseIcon({ family, color, size = 44 }) {
   );
 }
 
-function WorkoutCard({ w, onStart, recommended }) {
+function WorkoutCard({ w, onStart, recommended, isFavorite, onToggleFavorite }) {
   const Icon = w.type === "Recovery" ? Leaf : Dumbbell;
   return (
     <div
@@ -680,6 +681,9 @@ function WorkoutCard({ w, onStart, recommended }) {
           <div style={{ fontSize: 13, color: theme.text, fontWeight: 500 }}>{w.name}</div>
           <div style={{ fontSize: 11, color: theme.muted }}>{w.type} · {w.exercises} exercises · {w.duration} min</div>
         </div>
+        <button onClick={onToggleFavorite} style={{ background: "none", border: "none", padding: 4, flexShrink: 0 }}>
+          <Heart size={15} color={isFavorite ? theme.coral : theme.muted} fill={isFavorite ? theme.coral : "none"} />
+        </button>
         <button
           onClick={onStart}
           style={{ display: "flex", alignItems: "center", gap: 4, background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "7px 10px", fontSize: 11, fontWeight: 600, flexShrink: 0 }}
@@ -702,7 +706,22 @@ export default function FitSyncPrototype() {
   const saved = useMemo(() => loadSaved(), []);
   const [onboarded, setOnboarded] = useState(saved.onboarded ?? false);
   const [onboardStep, setOnboardStep] = useState(1);
-  const [profile, setProfile] = useState(saved.profile ?? { goal: null, experience: null, equipment: null, cycleAware: false, cycleStartDate: "", cycleLength: 28 });
+  const [profile, setProfile] = useState(saved.profile ?? { name: "", age: "", height: "", startWeight: "", goal: null, experience: null, equipment: null, cycleAware: false, cycleStartDate: "", cycleLength: 28 });
+  const [targets, setTargets] = useState(saved.targets ?? DEFAULT_TARGETS);
+  const [unitsPref, setUnitsPref] = useState(saved.unitsPref ?? "kg");
+  const [favorites, setFavorites] = useState(saved.favorites ?? { foods: [], workouts: [] });
+  const [showSettings, setShowSettings] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showPlanner, setShowPlanner] = useState(false);
+  const [weekPlan, setWeekPlan] = useState(saved.weekPlan ?? { Mon: null, Tue: null, Wed: null, Thu: null, Fri: null, Sat: null, Sun: null });
+  const [showWorkoutHistory, setShowWorkoutHistory] = useState(false);
+  const [showNutritionHistory, setShowNutritionHistory] = useState(false);
+  const [waterLogged, setWaterLogged] = useState(saved.waterLogged ?? 1.8);
+
+  function logWater() {
+    setWaterLogged((w) => Math.round(Math.min(w + 0.25, 5) * 100) / 100);
+    awardXp(5, "water_logged");
+  }
 
   const [activeScreen, setActiveScreen] = useState("home");
   const [log, setLog] = useState(saved.log ?? initialLog);
@@ -802,8 +821,8 @@ export default function FitSyncPrototype() {
   const carbsConsumed = useMemo(() => sumField(log, "carbs"), [log]);
   const fatConsumed = useMemo(() => sumField(log, "fat"), [log]);
   const fiberConsumed = useMemo(() => log.reduce((acc, e) => acc + (e.food.fiber || 0) * e.qty, 0), [log]);
-  const remaining = Math.max(TARGETS.kcal - kcalConsumed, 0);
-  const pctKcal = (kcalConsumed / TARGETS.kcal) * 100;
+  const remaining = Math.max(targets.kcal - kcalConsumed, 0);
+  const pctKcal = (kcalConsumed / targets.kcal) * 100;
 
   const cycleDay = useMemo(() => {
     if (!profile.cycleStartDate) return (new Date().getDate() % 28) + 1;
@@ -829,7 +848,7 @@ export default function FitSyncPrototype() {
 
   function addToLog() {
     if (!selectedFood) return;
-    setLog((prev) => [...prev, { logId: `${Date.now()}`, meal: targetMeal, food: selectedFood, qty }]);
+    setLog((prev) => [...prev, { logId: `${Date.now()}`, meal: targetMeal, food: selectedFood, qty, date: new Date().toDateString() }]);
     setSelectedFood(null);
     setQty(1);
     setQuery("");
@@ -841,7 +860,7 @@ export default function FitSyncPrototype() {
   }
 
   function quickAdd(food) {
-    setLog((prev) => [...prev, { logId: `${Date.now()}`, meal: targetMeal, food, qty: 1 }]);
+    setLog((prev) => [...prev, { logId: `${Date.now()}`, meal: targetMeal, food, qty: 1, date: new Date().toDateString() }]);
     setJustAddedId(food.id);
     setTimeout(() => setJustAddedId(null), 900);
     awardXp(10, "food_logged");
@@ -851,7 +870,7 @@ export default function FitSyncPrototype() {
 
   const coachLine =
     remaining > 0
-      ? `You have ${Math.round(remaining)} calories and ${Math.max(Math.round(TARGETS.protein - proteinConsumed), 0)}g protein remaining.`
+      ? `You have ${Math.round(remaining)} calories and ${Math.max(Math.round(targets.protein - proteinConsumed), 0)}g protein remaining.`
       : "You've hit your calorie target for today.";
 
   function generateWorkout() {
@@ -1041,14 +1060,15 @@ export default function FitSyncPrototype() {
         meal: targetMeal,
         food: { id: `recipe-${recipe.id}`, name: recipe.name, serving: "1 serving", kcal: recipe.perServing.kcal, protein: recipe.perServing.protein, carbs: recipe.perServing.carbs, fat: recipe.perServing.fat, fiber: 0 },
         qty: 1,
+        date: new Date().toDateString(),
       },
     ]);
     awardXp(10, "recipe_logged");
   }
 
   function buildMealSuggestions() {
-    const remainingKcal = Math.max(TARGETS.kcal - kcalConsumed, 0);
-    const remainingProtein = Math.max(TARGETS.protein - proteinConsumed, 0);
+    const remainingKcal = Math.max(targets.kcal - kcalConsumed, 0);
+    const remainingProtein = Math.max(targets.protein - proteinConsumed, 0);
     const scored = FOOD_DB.filter(passesDiet)
       .map((f) => {
         const kcalDiff = Math.abs(f.kcal - remainingKcal * 0.4);
@@ -1060,17 +1080,58 @@ export default function FitSyncPrototype() {
     setMealSuggestions(scored);
   }
 
+  function toggleFavoriteFood(id) {
+    setFavorites((prev) => ({
+      ...prev,
+      foods: prev.foods.includes(id) ? prev.foods.filter((x) => x !== id) : [...prev.foods, id],
+    }));
+  }
+
+  function toggleFavoriteWorkout(id) {
+    setFavorites((prev) => ({
+      ...prev,
+      workouts: prev.workouts.includes(id) ? prev.workouts.filter((x) => x !== id) : [...prev.workouts, id],
+    }));
+  }
+
+  function exportData() {
+    const blob = new Blob([JSON.stringify({ profile, log, weightHistory, measurementLog, exerciseHistory, timeline, targets }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "fitsync-data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function resetAllData() {
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.location.reload();
+  }
+
+  const nutritionByDay = useMemo(() => {
+    const groups = {};
+    log.forEach((e) => {
+      const day = e.date || new Date().toDateString();
+      if (!groups[day]) groups[day] = { kcal: 0, protein: 0, entries: 0 };
+      groups[day].kcal += e.food.kcal * e.qty;
+      groups[day].protein += e.food.protein * e.qty;
+      groups[day].entries += 1;
+    });
+    return Object.entries(groups).sort((a, b) => new Date(b[0]) - new Date(a[0]));
+  }, [log]);
+
   function nutritionInsight() {
-    const proteinPct = (proteinConsumed / TARGETS.protein) * 100;
-    const fiberPct = (fiberConsumed / TARGETS.fiber) * 100;
+    const proteinPct = (proteinConsumed / targets.protein) * 100;
+    const fiberPct = (fiberConsumed / targets.fiber) * 100;
     if (proteinPct >= 90) return { icon: Zap, color: theme.amber, label: "Protein", text: `You're at ${Math.round(proteinPct)}% of your protein goal — right on track.` };
-    if (fiberPct < 50) return { icon: Leaf, color: theme.lime, label: "Fiber", text: `You're at ${Math.round(fiberConsumed)}g of ${TARGETS.fiber}g fiber — a piece of fruit or legumes would help.` };
+    if (fiberPct < 50) return { icon: Leaf, color: theme.lime, label: "Fiber", text: `You're at ${Math.round(fiberConsumed)}g of ${targets.fiber}g fiber — a piece of fruit or legumes would help.` };
     return { icon: Droplet, color: theme.sky, label: "Hydration", text: "Keep sipping water through the rest of the day — you're doing well overall." };
   }
 
   const fitsyncScore = useMemo(() => {
     const training = workoutDone ? 90 : 55;
-    const nutrition = Math.min(100, Math.round((proteinConsumed / TARGETS.protein) * 100));
+    const nutrition = Math.min(100, Math.round((proteinConsumed / targets.protein) * 100));
     const consistency = Math.min(100, streak * 12);
     const recovery = lastWorkoutType === "Recovery" ? 90 : 72;
     const overall = Math.round((training + nutrition + consistency + recovery) / 4);
@@ -1171,6 +1232,11 @@ export default function FitSyncPrototype() {
         myRecipes,
         goalWeight,
         prCount,
+        targets,
+        unitsPref,
+        favorites,
+        weekPlan,
+        waterLogged,
         timeline: timeline.map((t) => ({ id: t.id, text: t.text, type: t.type, ts: t.ts, time: t.time })),
         xpLedger,
         unlockedAchievementIds,
@@ -1179,7 +1245,7 @@ export default function FitSyncPrototype() {
     } catch (e) {
       // storage full or unavailable — fail silently, app still works in-memory
     }
-  }, [onboarded, profile, log, workoutDone, weightHistory, measurementLog, photos, streak, exerciseHistory, myRecipes, goalWeight, prCount, timeline, xpLedger, unlockedAchievementIds]);
+  }, [onboarded, profile, log, workoutDone, weightHistory, measurementLog, photos, streak, exerciseHistory, myRecipes, goalWeight, prCount, timeline, xpLedger, unlockedAchievementIds, targets, unitsPref, favorites, weekPlan, waterLogged]);
 
   const totalWorkouts = useMemo(() => timeline.filter((t) => t.type === "workout").length, [timeline]);
   const homeWorkouts = useMemo(() => timeline.filter((t) => t.type === "workout" && t.text.toLowerCase().includes("home")).length, [timeline]);
@@ -1237,7 +1303,7 @@ export default function FitSyncPrototype() {
 
   const challenges = [
     { id: 1, label: "Log 3 meals today", done: log.length >= 3, xpReward: 20 },
-    { id: 2, label: `Hit protein target (${TARGETS.protein}g)`, done: proteinConsumed >= TARGETS.protein, xpReward: 25 },
+    { id: 2, label: `Hit protein target (${targets.protein}g)`, done: proteinConsumed >= targets.protein, xpReward: 25 },
     { id: 3, label: "Complete today's workout", done: workoutDone, xpReward: 30 },
   ];
 
@@ -1268,12 +1334,48 @@ export default function FitSyncPrototype() {
           }}
         >
           <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <div key={s} style={{ flex: 1, height: 3, borderRadius: 2, background: s <= onboardStep ? theme.lime : theme.surfaceAlt }} />
             ))}
           </div>
 
           {onboardStep === 1 && (
+            <>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 600, color: theme.text, marginBottom: 6 }}>About you</div>
+              <div style={{ fontSize: 13, color: theme.muted, marginBottom: 20 }}>Optional — helps personalize your experience.</div>
+              <input
+                value={profile.name}
+                onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Name"
+                style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "12px 14px", color: theme.text, fontSize: 13, marginBottom: 10, outline: "none" }}
+              />
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <input
+                  type="number"
+                  value={profile.age}
+                  onChange={(e) => setProfile((p) => ({ ...p, age: e.target.value }))}
+                  placeholder="Age"
+                  style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "12px 14px", color: theme.text, fontSize: 13, outline: "none" }}
+                />
+                <input
+                  type="number"
+                  value={profile.height}
+                  onChange={(e) => setProfile((p) => ({ ...p, height: e.target.value }))}
+                  placeholder="Height (cm)"
+                  style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "12px 14px", color: theme.text, fontSize: 13, outline: "none" }}
+                />
+              </div>
+              <input
+                type="number"
+                value={profile.startWeight}
+                onChange={(e) => setProfile((p) => ({ ...p, startWeight: e.target.value }))}
+                placeholder="Current weight (kg)"
+                style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "12px 14px", color: theme.text, fontSize: 13, outline: "none" }}
+              />
+            </>
+          )}
+
+          {onboardStep === 2 && (
             <>
               <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 600, color: theme.text, marginBottom: 6 }}>What's your main goal?</div>
               <div style={{ fontSize: 13, color: theme.muted, marginBottom: 20 }}>This shapes your calorie target and workout plan.</div>
@@ -1285,7 +1387,7 @@ export default function FitSyncPrototype() {
             </>
           )}
 
-          {onboardStep === 2 && (
+          {onboardStep === 3 && (
             <>
               <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 600, color: theme.text, marginBottom: 6 }}>Your experience & setup</div>
               <div style={{ fontSize: 13, color: theme.muted, marginBottom: 16 }}>So workouts match your level and what you have access to.</div>
@@ -1306,7 +1408,7 @@ export default function FitSyncPrototype() {
             </>
           )}
 
-          {onboardStep === 3 && (
+          {onboardStep === 4 && (
             <>
               <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 600, color: theme.text, marginBottom: 6 }}>One more thing</div>
               <div style={{ fontSize: 13, color: theme.muted, marginBottom: 20 }}>Optional — you can change this anytime in Settings.</div>
@@ -1368,13 +1470,13 @@ export default function FitSyncPrototype() {
             )}
             <button
               onClick={() => {
-                if (onboardStep < 3) {
+                if (onboardStep < 4) {
                   setOnboardStep((s) => s + 1);
                 } else {
                   setOnboarded(true);
                 }
               }}
-              disabled={(onboardStep === 1 && !profile.goal) || (onboardStep === 2 && (!profile.experience || !profile.equipment))}
+              disabled={(onboardStep === 2 && !profile.goal) || (onboardStep === 3 && (!profile.experience || !profile.equipment))}
               style={{
                 flex: 2,
                 display: "flex",
@@ -1388,10 +1490,10 @@ export default function FitSyncPrototype() {
                 color: "#12211D",
                 fontSize: 13,
                 fontWeight: 600,
-                opacity: (onboardStep === 1 && !profile.goal) || (onboardStep === 2 && (!profile.experience || !profile.equipment)) ? 0.4 : 1,
+                opacity: (onboardStep === 2 && !profile.goal) || (onboardStep === 3 && (!profile.experience || !profile.equipment)) ? 0.4 : 1,
               }}
             >
-              {onboardStep < 3 ? "Continue" : "Get Started"} <ChevronRight size={14} />
+              {onboardStep < 4 ? "Continue" : "Get Started"} <ChevronRight size={14} />
             </button>
           </div>
         </div>
@@ -1437,6 +1539,9 @@ export default function FitSyncPrototype() {
             <button style={{ background: "none", border: "none", padding: 4 }}>
               <Bell size={18} color={theme.muted} />
             </button>
+            <button onClick={() => setShowSettings(true)} style={{ background: "none", border: "none", padding: 4 }}>
+              <Settings size={18} color={theme.muted} />
+            </button>
           </div>
         </div>
 
@@ -1463,7 +1568,7 @@ export default function FitSyncPrototype() {
                   <div style={{ fontSize: 13, color: theme.muted }}>{getGreeting()},</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>
-                      {profile.goal ? "Athlete" : "there"}
+                      {profile.name ? profile.name : "there"}
                     </span>
                     <span style={{ fontSize: 16 }}>👋</span>
                   </div>
@@ -1517,10 +1622,10 @@ export default function FitSyncPrototype() {
                   <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 600, color: theme.text }}>Today's Progress</span>
                   <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: theme.lime, fontWeight: 500 }}>
                     {Math.round(
-                      ((Math.min(kcalConsumed / TARGETS.kcal, 1) +
-                        Math.min(proteinConsumed / TARGETS.protein, 1) +
-                        Math.min(7420 / TARGETS.steps, 1) +
-                        Math.min(1.8 / TARGETS.water, 1)) /
+                      ((Math.min(kcalConsumed / targets.kcal, 1) +
+                        Math.min(proteinConsumed / targets.protein, 1) +
+                        Math.min(7420 / targets.steps, 1) +
+                        Math.min(1.8 / targets.water, 1)) /
                         4) *
                         100
                     )}
@@ -1534,10 +1639,10 @@ export default function FitSyncPrototype() {
                       borderRadius: 5,
                       background: `linear-gradient(90deg, ${theme.lime}, ${theme.sky})`,
                       width: `${Math.round(
-                        ((Math.min(kcalConsumed / TARGETS.kcal, 1) +
-                          Math.min(proteinConsumed / TARGETS.protein, 1) +
-                          Math.min(7420 / TARGETS.steps, 1) +
-                          Math.min(1.8 / TARGETS.water, 1)) /
+                        ((Math.min(kcalConsumed / targets.kcal, 1) +
+                          Math.min(proteinConsumed / targets.protein, 1) +
+                          Math.min(7420 / targets.steps, 1) +
+                          Math.min(1.8 / targets.water, 1)) /
                           4) *
                           100
                       )}%`,
@@ -1549,10 +1654,10 @@ export default function FitSyncPrototype() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 16 }}>
                 {[
-                  { icon: Flame, color: theme.coral, label: "Calories", value: `${Math.round(kcalConsumed)}`, target: TARGETS.kcal },
-                  { icon: Zap, color: theme.amber, label: "Protein", value: `${Math.round(proteinConsumed)}`, target: `${TARGETS.protein}g` },
+                  { icon: Flame, color: theme.coral, label: "Calories", value: `${Math.round(kcalConsumed)}`, target: targets.kcal },
+                  { icon: Zap, color: theme.amber, label: "Protein", value: `${Math.round(proteinConsumed)}`, target: `${targets.protein}g` },
                   { icon: Footprints, color: theme.lime, label: "Steps", value: "7,420", target: "10k" },
-                  { icon: Droplet, color: theme.sky, label: "Water", value: "1.8", target: "2.5L" },
+                  { icon: Droplet, color: theme.sky, label: "Water", value: `${waterLogged}`, target: "2.5L" },
                 ].map((s) => (
                   <div
                     key={s.label}
@@ -1591,7 +1696,7 @@ export default function FitSyncPrototype() {
                 {[
                   { icon: Dumbbell, title: "Upper Body", subtitle: "6 exercises · 42 min", done: workoutDone, onToggle: () => setWorkoutDone((d) => !d) },
                   { icon: Footprints, title: "10,000 Steps", subtitle: "7,420 / 10,000", done: false, onToggle: null },
-                  { icon: Droplet, title: "Drink 2.5L Water", subtitle: "1.8 / 2.5 L", done: false, onToggle: null },
+                  { icon: Droplet, title: "Drink 2.5L Water", subtitle: `${waterLogged} / 2.5 L`, done: waterLogged >= targets.water, onToggle: logWater },
                 ].map((item, i) => (
                   <div
                     key={i}
@@ -1701,7 +1806,12 @@ export default function FitSyncPrototype() {
 
           {activeScreen === "nutrition" && (
             <>
-              <ScreenHeader title="Nutrition" subtitle="Your personalized food hub" />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <ScreenHeader title="Nutrition" subtitle="Your personalized food hub" />
+                <button onClick={() => setShowNutritionHistory(true)} style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 7 }}>
+                  <BarChart3 size={14} color={theme.muted} />
+                </button>
+              </div>
 
               <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
                 {[
@@ -1730,21 +1840,27 @@ export default function FitSyncPrototype() {
 
               {nutritionTab === "today" && (
                 <>
+                  <button
+                    onClick={() => setShowNutritionHistory(true)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, color: theme.text, borderRadius: 10, padding: "9px 0", fontSize: 12, marginBottom: 12 }}
+                  >
+                    View nutrition history <ChevronRight size={13} />
+                  </button>
                   <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
                     <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 4 }}>Today's Nutrition</div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
                       <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 26, color: theme.text }}>{Math.round(kcalConsumed)}</span>
-                      <span style={{ fontSize: 12, color: theme.muted }}>/ {TARGETS.kcal} kcal</span>
+                      <span style={{ fontSize: 12, color: theme.muted }}>/ {targets.kcal} kcal</span>
                     </div>
                     <div style={{ height: 7, borderRadius: 4, background: theme.surfaceAlt, overflow: "hidden", marginBottom: 6 }}>
-                      <div style={{ height: "100%", width: `${Math.min((kcalConsumed / TARGETS.kcal) * 100, 100)}%`, background: theme.lime, borderRadius: 4 }} />
+                      <div style={{ height: "100%", width: `${Math.min((kcalConsumed / targets.kcal) * 100, 100)}%`, background: theme.lime, borderRadius: 4 }} />
                     </div>
-                    <div style={{ fontSize: 11, color: theme.lime, marginBottom: 12 }}>{Math.max(Math.round(TARGETS.kcal - kcalConsumed), 0)} kcal remaining</div>
+                    <div style={{ fontSize: 11, color: theme.lime, marginBottom: 12 }}>{Math.max(Math.round(targets.kcal - kcalConsumed), 0)} kcal remaining</div>
                     {[
-                      ["Protein", proteinConsumed, TARGETS.protein, theme.coral],
-                      ["Carbs", carbsConsumed, TARGETS.carbs, theme.lime],
-                      ["Fat", fatConsumed, TARGETS.fat, theme.sky],
-                      ["Fiber", fiberConsumed, TARGETS.fiber, theme.amber],
+                      ["Protein", proteinConsumed, targets.protein, theme.coral],
+                      ["Carbs", carbsConsumed, targets.carbs, theme.lime],
+                      ["Fat", fatConsumed, targets.fat, theme.sky],
+                      ["Fiber", fiberConsumed, targets.fiber, theme.amber],
                     ].map(([label, val, target, color]) => (
                       <div key={label} style={{ marginBottom: 6 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
@@ -1854,12 +1970,17 @@ export default function FitSyncPrototype() {
                           <div style={{ fontSize: 13, color: theme.text }}>{f.name}</div>
                           <div style={{ fontSize: 10.5, color: theme.muted }}>{f.cuisine} · {f.serving} · {f.kcal} kcal</div>
                         </div>
-                        <button
-                          onClick={() => quickAdd(f)}
-                          style={{ width: 28, height: 28, borderRadius: "50%", background: theme.surfaceAlt, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                        >
-                          <Plus size={13} color={theme.lime} />
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <button onClick={() => toggleFavoriteFood(f.id)} style={{ background: "none", border: "none", padding: 4 }}>
+                            <Heart size={15} color={favorites.foods.includes(f.id) ? theme.coral : theme.muted} fill={favorites.foods.includes(f.id) ? theme.coral : "none"} />
+                          </button>
+                          <button
+                            onClick={() => quickAdd(f)}
+                            style={{ width: 28, height: 28, borderRadius: "50%", background: theme.surfaceAlt, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                          >
+                            <Plus size={13} color={theme.lime} />
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -1874,7 +1995,7 @@ export default function FitSyncPrototype() {
                       <span style={{ fontSize: 13, color: theme.text, fontWeight: 600 }}>AI Meal Builder</span>
                     </div>
                     <div style={{ fontSize: 11.5, color: theme.muted, marginBottom: 10, lineHeight: 1.4 }}>
-                      Based on what's left today: {Math.max(Math.round(TARGETS.kcal - kcalConsumed), 0)} kcal and {Math.max(Math.round(TARGETS.protein - proteinConsumed), 0)}g protein remaining.
+                      Based on what's left today: {Math.max(Math.round(targets.kcal - kcalConsumed), 0)} kcal and {Math.max(Math.round(targets.protein - proteinConsumed), 0)}g protein remaining.
                     </div>
                     <button
                       onClick={buildMealSuggestions}
@@ -1998,7 +2119,26 @@ export default function FitSyncPrototype() {
 
           {activeScreen === "workout" && (
             <>
-              <ScreenHeader title="Workout" subtitle={`For your goal: ${profile.goal || "Not set"}`} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <ScreenHeader title="Workout" subtitle={`For your goal: ${profile.goal || "Not set"}`} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => setShowPlanner(true)} style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 7 }}>
+                    <Sparkles size={14} color={theme.muted} />
+                  </button>
+                  <button onClick={() => setShowWorkoutHistory(true)} style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8, padding: 7 }}>
+                    <BarChart3 size={14} color={theme.muted} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                <button onClick={() => setShowPlanner(true)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: theme.surface, border: `1px solid ${theme.border}`, color: theme.text, borderRadius: 10, padding: "9px 0", fontSize: 12 }}>
+                  <Target size={13} /> Weekly Planner
+                </button>
+                <button onClick={() => setShowWorkoutHistory(true)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: theme.surface, border: `1px solid ${theme.border}`, color: theme.text, borderRadius: 10, padding: "9px 0", fontSize: 12 }}>
+                  <ChevronRight size={13} /> History
+                </button>
+              </div>
 
               {workoutFeedback && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(201,240,101,0.1)", border: `1px solid ${theme.lime}`, borderRadius: 12, padding: "10px 12px", marginBottom: 14 }}>
@@ -2081,7 +2221,7 @@ export default function FitSyncPrototype() {
                 <>
                   <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.lime, textTransform: "uppercase", marginBottom: 8 }}>Recommended for you</div>
                   {recommended.map((w) => (
-                    <WorkoutCard key={w.id} w={w} recommended onStart={() => openSession(w)} />
+                    <WorkoutCard key={w.id} w={w} recommended onStart={() => openSession(w)} isFavorite={favorites.workouts.includes(w.id)} onToggleFavorite={() => toggleFavoriteWorkout(w.id)} />
                   ))}
                 </>
               )}
@@ -2092,7 +2232,7 @@ export default function FitSyncPrototype() {
               {rest.length === 0 && recommended.length === 0 ? (
                 <div style={{ fontSize: 12, color: theme.muted, padding: "10px 0" }}>No workouts match this filter.</div>
               ) : (
-                rest.map((w) => <WorkoutCard key={w.id} w={w} onStart={() => openSession(w)} />)
+                rest.map((w) => <WorkoutCard key={w.id} w={w} onStart={() => openSession(w)} isFavorite={favorites.workouts.includes(w.id)} onToggleFavorite={() => toggleFavoriteWorkout(w.id)} />)
               )}
             </>
           )}
@@ -2820,6 +2960,409 @@ export default function FitSyncPrototype() {
                     )}
                   </div>
                 ))}
+            </div>
+          </div>
+        )}
+
+        {showSettings && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Settings</span>
+              <button onClick={() => setShowSettings(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px 24px" }}>
+              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Profile</div>
+              <input value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} placeholder="Name" style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 13px", color: theme.text, fontSize: 13, marginBottom: 8, outline: "none" }} />
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                <input type="number" value={profile.age} onChange={(e) => setProfile((p) => ({ ...p, age: e.target.value }))} placeholder="Age" style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 13px", color: theme.text, fontSize: 13, outline: "none" }} />
+                <input type="number" value={profile.height} onChange={(e) => setProfile((p) => ({ ...p, height: e.target.value }))} placeholder="Height (cm)" style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 13px", color: theme.text, fontSize: 13, outline: "none" }} />
+              </div>
+
+              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Units</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                {["kg", "lb"].map((u) => (
+                  <button key={u} onClick={() => setUnitsPref(u)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1px solid ${unitsPref === u ? theme.lime : theme.border}`, background: unitsPref === u ? "rgba(201,240,101,0.08)" : "transparent", color: unitsPref === u ? theme.lime : theme.muted, fontSize: 12.5 }}>
+                    {u === "kg" ? "Kilograms" : "Pounds"}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Nutrition Targets</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+                {[
+                  ["kcal", "Calories"],
+                  ["protein", "Protein (g)"],
+                  ["carbs", "Carbs (g)"],
+                  ["fat", "Fat (g)"],
+                ].map(([key, label]) => (
+                  <div key={key}>
+                    <div style={{ fontSize: 9.5, color: theme.muted, marginBottom: 4 }}>{label}</div>
+                    <input
+                      type="number"
+                      value={targets[key]}
+                      onChange={(e) => setTargets((t) => ({ ...t, [key]: Number(e.target.value) || 0 }))}
+                      style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "9px 10px", color: theme.text, fontSize: 12.5, outline: "none" }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Data</div>
+              <button onClick={exportData} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px solid ${theme.border}`, color: theme.text, borderRadius: 10, padding: "11px 0", fontSize: 13, marginBottom: 8 }}>
+                Export my data
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm("This will permanently erase all your FitSync data on this device. Continue?")) resetAllData();
+                }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px solid ${theme.coral}`, color: theme.coral, borderRadius: 10, padding: "11px 0", fontSize: 13 }}
+              >
+                Reset all data
+              </button>
+              <div style={{ fontSize: 10, color: theme.muted, marginTop: 20, lineHeight: 1.5, textAlign: "center" }}>
+                Data is stored locally on this device only. There's no account or cloud sync yet.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showQuickAdd && (
+          <>
+            <div onClick={() => setShowQuickAdd(false)} style={{ position: "absolute", inset: 0, background: "rgba(8,15,13,0.6)", zIndex: 25 }} />
+            <div style={{ position: "absolute", bottom: 90, right: 20, zIndex: 26, display: "flex", flexDirection: "column", gap: 8 }}>
+              {[
+                { icon: Apple, label: "Log Food", action: () => { setShowAddFood(true); setShowQuickAdd(false); } },
+                { icon: Droplet, label: "Log Water", action: () => { logWater(); setShowQuickAdd(false); } },
+                { icon: Scale, label: "Log Weight", action: () => { setActiveScreen("progress"); setProgressTab("body"); setShowQuickAdd(false); } },
+                { icon: Dumbbell, label: "Start Workout", action: () => { setActiveScreen("workout"); setShowQuickAdd(false); } },
+                { icon: Image, label: "Progress Photo", action: () => { setActiveScreen("progress"); setProgressTab("body"); setShowQuickAdd(false); } },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  onClick={item.action}
+                  style={{ display: "flex", alignItems: "center", gap: 10, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "10px 16px 10px 12px", boxShadow: "0 6px 16px rgba(0,0,0,0.3)" }}
+                >
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: theme.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <item.icon size={14} color={theme.lime} />
+                  </div>
+                  <span style={{ fontSize: 12.5, color: theme.text }}>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {!showAddFood && !activeSession && !showSettings && !showAchievements && !showWorkoutHistory && !showNutritionHistory && !showPlanner && (
+          <button
+            onClick={() => setShowQuickAdd((s) => !s)}
+            style={{
+              position: "absolute",
+              bottom: 90,
+              right: 20,
+              zIndex: 24,
+              width: 50,
+              height: 50,
+              borderRadius: "50%",
+              background: theme.lime,
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 6px 16px rgba(201,240,101,0.35)",
+              transform: showQuickAdd ? "rotate(45deg)" : "none",
+              transition: "transform 0.2s ease",
+            }}
+          >
+            <Plus size={22} color="#12211D" />
+          </button>
+        )}
+
+        {showWorkoutHistory && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Workout History</span>
+              <button onClick={() => setShowWorkoutHistory(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+              {timeline.filter((t) => t.type === "workout").length === 0 ? (
+                <div style={{ fontSize: 12, color: theme.muted, padding: "30px 0", textAlign: "center" }}>
+                  Your strength story starts with your first workout.
+                </div>
+              ) : (
+                timeline.filter((t) => t.type === "workout").map((t) => (
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 9, background: theme.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Dumbbell size={15} color={theme.lime} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, color: theme.text }}>{t.text}</div>
+                      <div style={{ fontSize: 10.5, color: theme.muted }}>{t.time}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+              <div style={{ fontSize: 10, color: theme.muted, marginTop: 12, textAlign: "center", lineHeight: 1.5 }}>
+                Set-by-set detail per session isn't stored yet — this shows which workouts you completed and when.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showNutritionHistory && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Nutrition History</span>
+              <button onClick={() => setShowNutritionHistory(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+              {nutritionByDay.map(([day, data]) => (
+                <div key={day} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: theme.text }}>{day}</div>
+                    <div style={{ fontSize: 10.5, color: theme.muted }}>{data.entries} items logged</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: theme.text }}>{Math.round(data.kcal)} kcal</div>
+                    <div style={{ fontSize: 10.5, color: theme.muted }}>{Math.round(data.protein)}g protein</div>
+                  </div>
+                </div>
+              ))}
+              <div style={{ fontSize: 10, color: theme.muted, marginTop: 12, textAlign: "center", lineHeight: 1.5 }}>
+                Only days logged since this feature was added will appear here.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showPlanner && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Weekly Planner</span>
+              <button onClick={() => setShowPlanner(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+              {Object.keys(weekPlan).map((day) => (
+                <div key={day} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8 }}>
+                  <div style={{ fontSize: 12.5, color: theme.text, fontWeight: 600, width: 42 }}>{day}</div>
+                  <select
+                    value={weekPlan[day] ?? ""}
+                    onChange={(e) => setWeekPlan((p) => ({ ...p, [day]: e.target.value || null }))}
+                    style={{ flex: 1, background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "9px 8px", color: theme.text, fontSize: 12, outline: "none", marginLeft: 10 }}
+                  >
+                    <option value="">Rest day</option>
+                    {WORKOUT_LIBRARY.map((w) => (
+                      <option key={w.id} value={w.name}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+              <div style={{ fontSize: 10, color: theme.muted, marginTop: 12, textAlign: "center", lineHeight: 1.5 }}>
+                This plan is a reference for you — starting a workout from here still happens from the Workout tab.
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ position: "absolute", bottom: 78, right: 16, zIndex: 25 }}>
+          {showQuickAdd && (
+            <div style={{ position: "absolute", bottom: 54, right: 0, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 14, padding: 8, width: 190, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+              {[
+                { icon: Apple, label: "Log Food", action: () => { setShowAddFood(true); setShowQuickAdd(false); } },
+                { icon: Droplet, label: "Log Water", action: () => { logWater(); setShowQuickAdd(false); } },
+                { icon: Scale, label: "Log Weight", action: () => { setActiveScreen("progress"); setProgressTab("body"); setShowQuickAdd(false); } },
+                { icon: Dumbbell, label: "Start Workout", action: () => { setActiveScreen("workout"); setShowQuickAdd(false); } },
+                { icon: Image, label: "Progress Photo", action: () => { setActiveScreen("progress"); setProgressTab("body"); setShowQuickAdd(false); } },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  onClick={item.action}
+                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", background: "none", border: "none", padding: "9px 8px", borderRadius: 8, fontSize: 12.5, color: theme.text, textAlign: "left" }}
+                >
+                  <item.icon size={14} color={theme.lime} /> {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setShowQuickAdd((s) => !s)}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              background: theme.lime,
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 6px 18px rgba(201,240,101,0.35)",
+              transform: showQuickAdd ? "rotate(45deg)" : "none",
+              transition: "transform 0.2s ease",
+            }}
+          >
+            <Plus size={22} color="#12211D" />
+          </button>
+        </div>
+
+        {showSettings && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Settings</span>
+              <button onClick={() => setShowSettings(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Profile</div>
+              <input
+                value={profile.name}
+                onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Name"
+                style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", color: theme.text, fontSize: 13, marginBottom: 8, outline: "none" }}
+              />
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                <input type="number" value={profile.age} onChange={(e) => setProfile((p) => ({ ...p, age: e.target.value }))} placeholder="Age" style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", color: theme.text, fontSize: 13, outline: "none" }} />
+                <input type="number" value={profile.height} onChange={(e) => setProfile((p) => ({ ...p, height: e.target.value }))} placeholder="Height (cm)" style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", color: theme.text, fontSize: 13, outline: "none" }} />
+              </div>
+
+              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Units</div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                {["kg", "lb"].map((u) => (
+                  <button key={u} onClick={() => setUnitsPref(u)} style={{ flex: 1, padding: "9px 0", borderRadius: 8, fontSize: 12, border: `1px solid ${unitsPref === u ? theme.lime : theme.border}`, background: unitsPref === u ? "rgba(201,240,101,0.08)" : "transparent", color: unitsPref === u ? theme.lime : theme.muted }}>
+                    {u === "kg" ? "Kilograms" : "Pounds"}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Nutrition targets</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+                {[
+                  ["kcal", "Calories"],
+                  ["protein", "Protein (g)"],
+                  ["carbs", "Carbs (g)"],
+                  ["fat", "Fat (g)"],
+                ].map(([field, label]) => (
+                  <div key={field}>
+                    <div style={{ fontSize: 9, color: theme.muted, marginBottom: 4 }}>{label}</div>
+                    <input
+                      type="number"
+                      value={targets[field]}
+                      onChange={(e) => setTargets((t) => ({ ...t, [field]: Number(e.target.value) || t[field] }))}
+                      style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "8px 10px", color: theme.text, fontSize: 12, outline: "none" }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Data</div>
+              <button onClick={exportData} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px solid ${theme.border}`, color: theme.text, borderRadius: 10, padding: "11px 0", fontSize: 12.5, marginBottom: 8 }}>
+                Export my data
+              </button>
+              <button
+                onClick={() => { if (window.confirm("This clears everything and cannot be undone. Continue?")) resetAllData(); }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px solid ${theme.coral}`, color: theme.coral, borderRadius: 10, padding: "11px 0", fontSize: 12.5 }}
+              >
+                Reset all data
+              </button>
+              <div style={{ fontSize: 10.5, color: theme.muted, marginTop: 20, lineHeight: 1.5, textAlign: "center" }}>
+                No account system yet — your data lives in this browser only. Setting up real accounts and cloud sync is the next big step.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showWorkoutHistory && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Workout History</span>
+              <button onClick={() => setShowWorkoutHistory(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+              {timeline.filter((t) => t.type === "workout").length === 0 ? (
+                <div style={{ fontSize: 12, color: theme.muted, textAlign: "center", padding: "30px 0" }}>No completed workouts yet — start one from the Workout tab.</div>
+              ) : (
+                timeline.filter((t) => t.type === "workout").map((t) => (
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", marginBottom: 6 }}>
+                    <Dumbbell size={15} color={theme.lime} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12.5, color: theme.text }}>{t.text}</div>
+                      <div style={{ fontSize: 10, color: theme.muted }}>{t.time}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+              <div style={{ fontSize: 10.5, color: theme.muted, marginTop: 12, textAlign: "center" }}>Per-set detail (weights, reps) isn't saved historically yet — only current personal bests.</div>
+            </div>
+          </div>
+        )}
+
+        {showNutritionHistory && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Nutrition History</span>
+              <button onClick={() => setShowNutritionHistory(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+              {nutritionByDay.map(([day, data]) => (
+                <div key={day} style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", marginBottom: 6 }}>
+                  <div style={{ fontSize: 12.5, color: theme.text, fontWeight: 500, marginBottom: 3 }}>{day}</div>
+                  <div style={{ fontSize: 11, color: theme.muted }}>{Math.round(data.kcal)} kcal · {Math.round(data.protein)}g protein · {data.entries} items logged</div>
+                </div>
+              ))}
+              <div style={{ fontSize: 10.5, color: theme.muted, marginTop: 12, textAlign: "center" }}>Only shows days since this feature was added — earlier demo entries aren't date-stamped.</div>
+            </div>
+          </div>
+        )}
+
+        {showPlanner && (
+          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
+            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Weekly Plan</span>
+              <button onClick={() => setShowPlanner(false)} style={{ background: "none", border: "none", padding: 4 }}>
+                <X size={18} color={theme.muted} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+              {Object.keys(weekPlan).map((day) => {
+                const assigned = weekPlan[day] ? WORKOUT_LIBRARY.find((w) => w.id === weekPlan[day]) : null;
+                return (
+                  <div key={day} style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assigned ? 6 : 0 }}>
+                      <span style={{ fontSize: 11, color: theme.muted, textTransform: "uppercase", letterSpacing: 1 }}>{day}</span>
+                      {assigned && (
+                        <button onClick={() => setWeekPlan((p) => ({ ...p, [day]: null }))} style={{ background: "none", border: "none" }}>
+                          <X size={13} color={theme.muted} />
+                        </button>
+                      )}
+                    </div>
+                    {assigned ? (
+                      <div style={{ fontSize: 13, color: theme.text }}>{assigned.name}</div>
+                    ) : (
+                      <select
+                        onChange={(e) => setWeekPlan((p) => ({ ...p, [day]: Number(e.target.value) }))}
+                        value=""
+                        style={{ width: "100%", background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "8px 10px", color: theme.muted, fontSize: 12, outline: "none" }}
+                      >
+                        <option value="" disabled>+ Add workout or leave as rest day</option>
+                        {WORKOUT_LIBRARY.map((w) => (
+                          <option key={w.id} value={w.id}>{w.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
