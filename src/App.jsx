@@ -34,683 +34,97 @@ import {
   ChefHat,
   Heart,
 } from "lucide-react";
+import { theme } from "./theme";
+import {
+  CUISINES,
+  FOOD_DB,
+  MEALS,
+  initialLog,
+  DEFAULT_TARGETS,
+  GOALS,
+  EXPERIENCE_LEVELS,
+  EQUIPMENT_OPTIONS,
+  TRAINING_LOCATIONS,
+  DETAILED_EQUIPMENT,
+  WORKOUT_TYPES,
+  WORKOUT_LIBRARY,
+  WEIGHT_HISTORY,
+  INITIAL_MEASUREMENTS,
+  NAV_ITEMS,
+} from "./data";
+import {
+  STORAGE_KEY,
+  loadSaved,
+  sumField,
+  inferMealFromTime,
+  getGreeting,
+  getQuickAddFoods,
+  detectFamily,
+  buildExerciseDetail,
+  getExerciseMedia,
+  parseSetsReps,
+  parseDurationSeconds,
+  scoreWorkout,
+  deriveEquipmentTag,
+} from "./helpers";
+import { Ring, GradientRing, MacroBar, StatPill, ScreenHeader, Chip, PoseIcon, WorkoutCard } from "./components";
 
-const theme = {
-  bg: "#0F1E1A",
-  surface: "#182C26",
-  surfaceAlt: "#20362E",
-  border: "#2B4A40",
-  lime: "#C9F065",
-  coral: "#FF8B5E",
-  sky: "#7EC8E3",
-  purple: "#B39DFF",
-  amber: "#FFC168",
-  text: "#EDF3EE",
-  muted: "#82998F",
-};
 
-const CUISINES = ["Indian", "Mexican", "Japanese", "Italian", "Thai", "Middle Eastern", "Chinese", "American", "Mediterranean", "Caribbean", "African", "Filipino"];
 
-const FOOD_DB = [
-  { id: 1, name: "Grilled chicken breast", serving: "150g", kcal: 248, protein: 46, carbs: 0, fat: 5.4, fiber: 0, cuisine: "American", diet: ["glutenFree", "dairyFree"] },
-  { id: 2, name: "Brown rice, cooked", serving: "1 cup", kcal: 216, protein: 5, carbs: 45, fat: 1.8, fiber: 3.5, cuisine: "American", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
-  { id: 3, name: "Avocado", serving: "1/2 medium", kcal: 120, protein: 1.5, carbs: 6, fat: 11, fiber: 5, cuisine: "American", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
-  { id: 4, name: "Greek yogurt, plain", serving: "170g", kcal: 100, protein: 17, carbs: 6, fat: 0.7, fiber: 0, cuisine: "Mediterranean", diet: ["vegetarian", "glutenFree"] },
-  { id: 5, name: "Whole wheat toast", serving: "1 slice", kcal: 80, protein: 4, carbs: 14, fat: 1, fiber: 2, cuisine: "American", diet: ["vegan", "vegetarian", "dairyFree"] },
-  { id: 6, name: "Almonds", serving: "28g handful", kcal: 164, protein: 6, carbs: 6, fat: 14, fiber: 3.5, cuisine: "American", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
-  { id: 7, name: "Banana", serving: "1 medium", kcal: 105, protein: 1.3, carbs: 27, fat: 0.4, fiber: 3, cuisine: "American", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
-  { id: 8, name: "Salmon fillet", serving: "170g", kcal: 367, protein: 39, carbs: 0, fat: 22, fiber: 0, cuisine: "American", diet: ["glutenFree", "dairyFree"] },
-  { id: 9, name: "Protein smoothie", serving: "1 shake", kcal: 220, protein: 30, carbs: 15, fat: 4, fiber: 2, cuisine: "American", diet: ["vegetarian", "glutenFree"] },
-  { id: 10, name: "Paneer pasta", serving: "1 bowl", kcal: 640, protein: 32, carbs: 70, fat: 22, fiber: 4, cuisine: "Italian", diet: ["vegetarian"] },
-  { id: 11, name: "Rajma Chawal", serving: "1 bowl · 350g", kcal: 520, protein: 20, carbs: 78, fat: 12, fiber: 14, cuisine: "Indian", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
-  { id: 12, name: "Butter Chicken", serving: "1 serving · 320g", kcal: 540, protein: 32, carbs: 24, fat: 36, fiber: 3, cuisine: "Indian", diet: ["glutenFree"] },
-  { id: 13, name: "Chole", serving: "1 bowl · 300g", kcal: 420, protein: 15, carbs: 58, fat: 14, fiber: 12, cuisine: "Indian", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
-  { id: 14, name: "Palak Paneer", serving: "1 bowl · 300g", kcal: 380, protein: 18, carbs: 16, fat: 27, fiber: 5, cuisine: "Indian", diet: ["vegetarian", "glutenFree"] },
-  { id: 15, name: "Aloo Paratha", serving: "1 piece", kcal: 290, protein: 6, carbs: 40, fat: 12, fiber: 4, cuisine: "Indian", diet: ["vegan", "vegetarian", "dairyFree"] },
-  { id: 16, name: "Tacos (beef, 2)", serving: "2 tacos", kcal: 380, protein: 22, carbs: 32, fat: 18, fiber: 5, cuisine: "Mexican", diet: ["glutenFree"] },
-  { id: 17, name: "Burrito Bowl", serving: "1 bowl · 400g", kcal: 610, protein: 34, carbs: 68, fat: 20, fiber: 11, cuisine: "Mexican", diet: ["glutenFree"] },
-  { id: 18, name: "Enchiladas (2)", serving: "2 pieces", kcal: 470, protein: 20, carbs: 42, fat: 25, fiber: 6, cuisine: "Mexican", diet: [] },
-  { id: 19, name: "Sushi Roll (8pc)", serving: "8 pieces", kcal: 300, protein: 10, carbs: 50, fat: 6, fiber: 2, cuisine: "Japanese", diet: ["dairyFree"] },
-  { id: 20, name: "Chicken Ramen", serving: "1 bowl", kcal: 500, protein: 28, carbs: 60, fat: 15, fiber: 4, cuisine: "Japanese", diet: [] },
-  { id: 21, name: "Miso Soup", serving: "1 cup", kcal: 60, protein: 4, carbs: 6, fat: 2, fiber: 1, cuisine: "Japanese", diet: ["vegan", "vegetarian", "dairyFree"] },
-  { id: 22, name: "Spaghetti Bolognese", serving: "1 plate · 350g", kcal: 590, protein: 28, carbs: 68, fat: 20, fiber: 5, cuisine: "Italian", diet: ["dairyFree"] },
-  { id: 23, name: "Margherita Pizza (2 slices)", serving: "2 slices", kcal: 480, protein: 18, carbs: 56, fat: 20, fiber: 3, cuisine: "Italian", diet: ["vegetarian"] },
-  { id: 24, name: "Risotto", serving: "1 bowl", kcal: 420, protein: 10, carbs: 60, fat: 14, fiber: 2, cuisine: "Italian", diet: ["vegetarian", "glutenFree"] },
-  { id: 25, name: "Pad Thai", serving: "1 plate", kcal: 550, protein: 22, carbs: 65, fat: 20, fiber: 4, cuisine: "Thai", diet: [] },
-  { id: 26, name: "Green Curry with Chicken", serving: "1 bowl", kcal: 480, protein: 26, carbs: 30, fat: 28, fiber: 4, cuisine: "Thai", diet: ["glutenFree", "dairyFree"] },
-  { id: 27, name: "Hummus & Pita", serving: "1 serving", kcal: 350, protein: 11, carbs: 45, fat: 15, fiber: 8, cuisine: "Middle Eastern", diet: ["vegan", "vegetarian", "dairyFree"] },
-  { id: 28, name: "Falafel Wrap", serving: "1 wrap", kcal: 460, protein: 15, carbs: 55, fat: 20, fiber: 9, cuisine: "Middle Eastern", diet: ["vegan", "vegetarian", "dairyFree"] },
-  { id: 29, name: "Chicken Shawarma Wrap", serving: "1 wrap", kcal: 520, protein: 32, carbs: 45, fat: 22, fiber: 4, cuisine: "Middle Eastern", diet: ["dairyFree"] },
-  { id: 30, name: "Vegetable Fried Rice", serving: "1 bowl · 300g", kcal: 420, protein: 10, carbs: 65, fat: 12, fiber: 4, cuisine: "Chinese", diet: ["vegan", "vegetarian", "dairyFree"] },
-  { id: 31, name: "Kung Pao Chicken", serving: "1 serving", kcal: 490, protein: 30, carbs: 28, fat: 26, fiber: 3, cuisine: "Chinese", diet: ["dairyFree"] },
-  { id: 32, name: "Cheeseburger", serving: "1 burger", kcal: 550, protein: 28, carbs: 40, fat: 30, fiber: 2, cuisine: "American", diet: [] },
-  { id: 33, name: "Grilled Chicken Salad", serving: "1 bowl", kcal: 380, protein: 35, carbs: 18, fat: 18, fiber: 6, cuisine: "American", diet: ["glutenFree", "dairyFree"] },
-  { id: 34, name: "Greek Salad", serving: "1 bowl", kcal: 320, protein: 9, carbs: 16, fat: 26, fiber: 5, cuisine: "Mediterranean", diet: ["vegetarian", "glutenFree"] },
-  { id: 35, name: "Grilled Salmon & Veg", serving: "1 plate", kcal: 460, protein: 38, carbs: 12, fat: 28, fiber: 4, cuisine: "Mediterranean", diet: ["glutenFree", "dairyFree"] },
-  { id: 36, name: "Jerk Chicken & Rice", serving: "1 plate", kcal: 610, protein: 36, carbs: 68, fat: 20, fiber: 4, cuisine: "Caribbean", diet: ["glutenFree", "dairyFree"] },
-  { id: 37, name: "Jollof Rice", serving: "1 bowl", kcal: 450, protein: 9, carbs: 78, fat: 12, fiber: 4, cuisine: "African", diet: ["vegan", "vegetarian", "glutenFree", "dairyFree"] },
-  { id: 38, name: "Chicken Adobo & Rice", serving: "1 plate", kcal: 580, protein: 32, carbs: 60, fat: 22, fiber: 2, cuisine: "Filipino", diet: ["glutenFree", "dairyFree"] },
-];
 
-const MEALS = ["Breakfast", "Lunch", "Snack", "Dinner"];
 
-const initialLog = [
-  { logId: "a1", meal: "Breakfast", food: FOOD_DB[3], qty: 1 },
-  { logId: "a2", meal: "Breakfast", food: FOOD_DB[6], qty: 1 },
-  { logId: "a3", meal: "Lunch", food: FOOD_DB[0], qty: 1 },
-  { logId: "a4", meal: "Lunch", food: FOOD_DB[1], qty: 1 },
-  { logId: "a5", meal: "Lunch", food: FOOD_DB[2], qty: 1 },
-  { logId: "a6", meal: "Snack", food: FOOD_DB[8], qty: 1 },
-  { logId: "a7", meal: "Dinner", food: FOOD_DB[5], qty: 1 },
-  { logId: "a8", meal: "Dinner", food: FOOD_DB[4], qty: 2 },
-];
 
-const DEFAULT_TARGETS = { kcal: 2200, protein: 120, carbs: 250, fat: 70, fiber: 28, water: 2.5, steps: 10000 };
 
-const GOALS = ["Lose Fat", "Build Muscle", "Gain Weight", "Tone & Sculpt", "Get Stronger", "General Fitness"];
-const EXPERIENCE_LEVELS = ["Beginner", "Intermediate", "Advanced"];
-const EQUIPMENT_OPTIONS = ["Full Gym", "Home - Dumbbells", "Bodyweight Only"];
-const WORKOUT_TYPES = ["All", "Strength", "Cardio", "Mobility", "Recovery"];
 
-const WORKOUT_LIBRARY = [
-  {
-    id: 1, name: "Upper Body Strength", type: "Strength", exercises: 6, duration: 42, difficulty: "Intermediate", equipment: "Full Gym", goal: "Build Muscle",
-    exerciseList: [
-      { name: "Lat Pulldown", detail: "3 sets x 10 reps", tip: "Sit tall, pull the bar to your upper chest, squeeze your back, control the return." },
-      { name: "Chest Press", detail: "3 sets x 10 reps", tip: "Press the handles forward until arms extend, avoid locking your elbows." },
-      { name: "Seated Row", detail: "3 sets x 12 reps", tip: "Pull handles to your torso, squeeze your shoulder blades together." },
-      { name: "Shoulder Press", detail: "3 sets x 10 reps", tip: "Press overhead until arms are extended, avoid arching your lower back." },
-      { name: "Biceps Curl", detail: "3 sets x 12 reps", tip: "Curl the weight up without swinging your torso." },
-      { name: "Triceps Pushdown", detail: "3 sets x 12 reps", tip: "Push the bar down until arms are straight, keep elbows tucked in." },
-    ],
-  },
-  {
-    id: 2, name: "Lower Body Power", type: "Strength", exercises: 5, duration: 38, difficulty: "Intermediate", equipment: "Full Gym", goal: "Get Stronger",
-    exerciseList: [
-      { name: "Barbell Squat", detail: "4 sets x 8 reps", tip: "Feet shoulder-width apart, sit back and down, keep your chest up." },
-      { name: "Romanian Deadlift", detail: "3 sets x 10 reps", tip: "Hinge at the hips, keep your back flat, lower the bar along your legs." },
-      { name: "Leg Press", detail: "3 sets x 12 reps", tip: "Push through your heels, avoid locking your knees at the top." },
-      { name: "Walking Lunges", detail: "3 sets x 12 each leg", tip: "Step forward, lower until both knees are near 90°, push back up." },
-      { name: "Calf Raise", detail: "3 sets x 15 reps", tip: "Rise onto your toes, pause, then lower slowly." },
-    ],
-  },
-  {
-    id: 3, name: "Full Body HIIT", type: "Cardio", exercises: 8, duration: 25, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "Lose Fat",
-    exerciseList: [
-      { name: "Jumping Jacks", detail: "45 seconds", tip: "Keep a steady rhythm and land softly." },
-      { name: "Bodyweight Squats", detail: "45 seconds", tip: "Full range of motion, keep your chest up." },
-      { name: "Mountain Climbers", detail: "45 seconds", tip: "Keep your hips low, drive your knees in quickly." },
-      { name: "Push-ups", detail: "45 seconds", tip: "Modify on your knees if needed, keep your core tight." },
-      { name: "Burpees", detail: "45 seconds", tip: "Move at your own pace, prioritize form over speed." },
-      { name: "High Knees", detail: "45 seconds", tip: "Pump your arms, land softly on the balls of your feet." },
-      { name: "Plank Hold", detail: "45 seconds", tip: "Keep your body in a straight line, engage your core." },
-      { name: "Cooldown Walk", detail: "60 seconds", tip: "Walk it out and focus on breathing deeply." },
-    ],
-  },
-  {
-    id: 4, name: "Core & Mobility", type: "Mobility", exercises: 6, duration: 20, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness",
-    exerciseList: [
-      { name: "Cat-Cow Stretch", detail: "10 reps", tip: "Alternate arching and rounding your spine slowly." },
-      { name: "Bird Dog", detail: "3 sets x 10 each side", tip: "Extend opposite arm and leg, keep your hips level." },
-      { name: "Dead Bug", detail: "3 sets x 12 reps", tip: "Lower the opposite arm and leg without arching your lower back." },
-      { name: "Plank", detail: "3 sets x 30 seconds", tip: "Keep a straight line from head to heels." },
-      { name: "Hip Flexor Stretch", detail: "30 seconds each side", tip: "From a lunge position, gently push your hips forward." },
-      { name: "World's Greatest Stretch", detail: "5 reps each side", tip: "Lunge, rotate your torso, and reach up toward the ceiling." },
-    ],
-  },
-  {
-    id: 5, name: "Home Dumbbell Push", type: "Strength", exercises: 5, duration: 30, difficulty: "Beginner", equipment: "Home - Dumbbells", goal: "Build Muscle",
-    exerciseList: [
-      { name: "Dumbbell Bench Press", detail: "3 sets x 10 reps", tip: "Lower the weights to chest level, press up evenly on both sides." },
-      { name: "Dumbbell Shoulder Press", detail: "3 sets x 10 reps", tip: "Press overhead, avoid arching your lower back." },
-      { name: "Incline Push-ups", detail: "3 sets x 12 reps", tip: "Hands on a stable elevated surface, keep your core tight." },
-      { name: "Lateral Raise", detail: "3 sets x 12 reps", tip: "Raise your arms to shoulder height with a slight bend in the elbows." },
-      { name: "Triceps Kickback", detail: "3 sets x 12 reps", tip: "Hinge forward, extend your arm back, squeeze your triceps." },
-    ],
-  },
-  {
-    id: 6, name: "Advanced Powerlifting Split", type: "Strength", exercises: 4, duration: 50, difficulty: "Advanced", equipment: "Full Gym", goal: "Get Stronger",
-    exerciseList: [
-      { name: "Barbell Back Squat", detail: "5 sets x 5 reps", tip: "Heavy compound lift — brace your core, controlled descent." },
-      { name: "Barbell Bench Press", detail: "5 sets x 5 reps", tip: "Retract your shoulder blades, keep a controlled bar path." },
-      { name: "Deadlift", detail: "3 sets x 5 reps", tip: "Neutral spine, drive through your heels, hips and shoulders rise together." },
-      { name: "Overhead Press", detail: "4 sets x 6 reps", tip: "Brace your core and press straight overhead." },
-    ],
-  },
-  {
-    id: 7, name: "Recovery Stretch Flow", type: "Recovery", exercises: 8, duration: 15, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness",
-    exerciseList: [
-      { name: "Child's Pose", detail: "60 seconds", tip: "Sit back onto your heels, reach arms forward, breathe deeply." },
-      { name: "Seated Forward Fold", detail: "45 seconds", tip: "Hinge from your hips, reach toward your toes, relax your neck." },
-      { name: "Figure-4 Stretch", detail: "45 seconds each side", tip: "Cross ankle over knee, gently pull your leg toward your chest." },
-      { name: "Thread the Needle", detail: "45 seconds each side", tip: "On all fours, thread one arm under the other and rotate." },
-      { name: "Standing Quad Stretch", detail: "30 seconds each side", tip: "Pull your heel toward your glutes, keep knees together." },
-      { name: "Deep Breathing", detail: "90 seconds", tip: "Slow inhales and exhales, relax your shoulders." },
-      { name: "Neck Rolls", detail: "30 seconds", tip: "Gentle circles, avoid forcing the range of motion." },
-      { name: "Shoulder Rolls", detail: "30 seconds", tip: "Roll your shoulders back and down slowly." },
-    ],
-  },
-  {
-    id: 8, name: "Full Body Gain Circuit", type: "Strength", exercises: 6, duration: 35, difficulty: "Intermediate", equipment: "Home - Dumbbells", goal: "Gain Weight",
-    exerciseList: [
-      { name: "Goblet Squat", detail: "4 sets x 10 reps", tip: "Hold the dumbbell at chest height, squat with control." },
-      { name: "Dumbbell Romanian Deadlift", detail: "3 sets x 10 reps", tip: "Hinge at the hips, keep dumbbells close to your legs." },
-      { name: "Push-ups", detail: "3 sets to near-failure", tip: "Full range of motion, keep your core tight." },
-      { name: "Bent-over Row", detail: "3 sets x 10 reps", tip: "Hinge forward, pull the dumbbells to your hips." },
-      { name: "Overhead Press", detail: "3 sets x 10 reps", tip: "Press the dumbbells overhead with control." },
-      { name: "Plank", detail: "3 sets x 40 seconds", tip: "Straight body line, engage your core throughout." },
-    ],
-  },
-  {
-    id: 9, name: "Deep Stretch & Mobility", type: "Recovery", exercises: 6, duration: 18, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness",
-    exerciseList: [
-      { name: "Downward Dog", detail: "45 seconds", tip: "Push your hips up and back, heels reaching toward the floor." },
-      { name: "Pigeon Pose", detail: "45 seconds each side", tip: "Deep hip opener — keep your hips as square as possible." },
-      { name: "Cobra Stretch", detail: "30 seconds", tip: "Gently press your chest up, keep your shoulders relaxed." },
-      { name: "Butterfly Stretch", detail: "45 seconds", tip: "Soles of your feet together, gently press your knees down." },
-      { name: "Spinal Twist", detail: "30 seconds each side", tip: "Lying down, drop your knees to one side and look the other way." },
-      { name: "Deep Breathing", detail: "60 seconds", tip: "Slow, controlled breaths to finish the session calmly." },
-    ],
-  },
-  {
-    id: 10, name: "Post-Leg-Day Recovery", type: "Recovery", exercises: 5, duration: 12, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "General Fitness",
-    exerciseList: [
-      { name: "Foam Roll Quads", detail: "60 seconds", tip: "Slow rolls, pause briefly on any tender spots." },
-      { name: "Standing Calf Stretch", detail: "30 seconds each side", tip: "Lean into a wall, keep your back heel down." },
-      { name: "Seated Hamstring Stretch", detail: "45 seconds each side", tip: "Reach toward your toes, keep your back flat." },
-      { name: "Glute Bridge Hold", detail: "45 seconds", tip: "Squeeze your glutes at the top, hips lifted." },
-      { name: "Walking Recovery", detail: "3 minutes", tip: "Easy pace, focus on breathing and letting your legs loosen up." },
-    ],
-  },
-  {
-    id: 11, name: "Sculpt & Tone Circuit", type: "Strength", exercises: 6, duration: 30, difficulty: "Beginner", equipment: "Home - Dumbbells", goal: "Tone & Sculpt",
-    exerciseList: [
-      { name: "Dumbbell Squat to Press", detail: "3 sets x 12 reps", tip: "Squat down, press the dumbbells overhead as you stand." },
-      { name: "Renegade Row", detail: "3 sets x 10 each side", tip: "Plank position, row one dumbbell at a time without twisting your hips." },
-      { name: "Sumo Squat", detail: "3 sets x 15 reps", tip: "Wide stance, toes turned out, squat with control." },
-      { name: "Lateral Lunge", detail: "3 sets x 10 each side", tip: "Step wide to the side, sit back into the hip you're loading." },
-      { name: "Triceps Dips", detail: "3 sets x 12 reps", tip: "Use a bench or sturdy chair, lower with control." },
-      { name: "Standing Side Crunch", detail: "3 sets x 15 each side", tip: "Bring your elbow and knee together, engage your obliques." },
-    ],
-  },
-  {
-    id: 12, name: "Glute & Core Tone", type: "Strength", exercises: 5, duration: 25, difficulty: "Beginner", equipment: "Bodyweight Only", goal: "Tone & Sculpt",
-    exerciseList: [
-      { name: "Glute Bridge", detail: "3 sets x 15 reps", tip: "Squeeze your glutes at the top, avoid overarching your back." },
-      { name: "Fire Hydrants", detail: "3 sets x 12 each side", tip: "On all fours, lift your leg out to the side with control." },
-      { name: "Donkey Kicks", detail: "3 sets x 12 each side", tip: "Kick your heel toward the ceiling, squeeze your glute at the top." },
-      { name: "Bicycle Crunches", detail: "3 sets x 20 reps", tip: "Controlled twist, avoid pulling on your neck." },
-      { name: "Side Plank", detail: "3 sets x 30 seconds each side", tip: "Stack your hips, keep your body in a straight line." },
-    ],
-  },
-];
 
-const WEIGHT_HISTORY = [
-  { label: "W1", value: 72.4 },
-  { label: "W2", value: 72.1 },
-  { label: "W3", value: 71.8 },
-  { label: "W4", value: 71.9 },
-  { label: "W5", value: 71.5 },
-  { label: "W6", value: 71.2 },
-];
+// Maps the richer, multi-select equipment list from Settings down to the simple
+// single tag scoreWorkout() and WORKOUT_LIBRARY already use, so recommendations
+// stay correct without retagging the whole library.
 
-const INITIAL_MEASUREMENTS = [{ label: "M1", waist: 82, hips: 96, chest: 98, arms: 33 }];
 
-const NAV_ITEMS = [
-  { key: "home", icon: HomeIcon, label: "Home" },
-  { key: "nutrition", icon: Apple, label: "Nutrition" },
-  { key: "workout", icon: Dumbbell, label: "Workout" },
-  { key: "progress", icon: BarChart3, label: "Progress" },
-  { key: "coach", icon: MessageCircle, label: "Coach" },
-];
 
-function sumField(log, field) {
-  return log.reduce((acc, entry) => acc + entry.food[field] * entry.qty, 0);
-}
 
-function inferMealFromTime() {
-  const hour = new Date().getHours();
-  if (hour < 11) return "Breakfast";
-  if (hour < 15) return "Lunch";
-  if (hour < 18) return "Snack";
-  return "Dinner";
-}
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
 
-function getQuickAddFoods(log, limit = 4) {
-  const counts = {};
-  const lastLogged = {};
-  log.forEach((e, idx) => {
-    counts[e.food.id] = (counts[e.food.id] || 0) + 1;
-    lastLogged[e.food.id] = idx;
-  });
-  return Object.keys(counts)
-    .sort((a, b) => {
-      const freqDiff = counts[b] - counts[a];
-      if (freqDiff !== 0) return freqDiff;
-      return lastLogged[b] - lastLogged[a];
-    })
-    .slice(0, limit)
-    .map((id) => FOOD_DB.find((f) => f.id === Number(id)))
-    .filter(Boolean);
-}
 
-const EXERCISE_FAMILIES = {
-  squat: {
-    category: "Compound · Lower Body",
-    primary: ["Quads", "Glutes"],
-    secondary: ["Core", "Hamstrings"],
-    benefits: ["Builds lower-body strength", "Improves everyday movement patterns like sitting and standing", "Engages your core for stability"],
-    steps: ["Stand with feet shoulder-width apart, weight in your heels.", "Sit your hips back and down as if sitting into a chair.", "Keep your chest up and knees tracking over your toes.", "Drive through your heels to stand back up."],
-    mistakes: ["Knees collapsing inward", "Rounding your lower back", "Rising onto your toes"],
-    alternatives: { easier: "Bodyweight squat", harder: "Barbell back squat", noEquipment: "Bodyweight squat, slow tempo" },
-  },
-  press: {
-    category: "Compound · Upper Body Push",
-    primary: ["Shoulders", "Chest"],
-    secondary: ["Triceps", "Core"],
-    benefits: ["Builds pressing strength", "Improves shoulder stability", "Carries over to everyday pushing movements"],
-    steps: ["Start with the weight at shoulder height, elbows slightly forward.", "Brace your core before pressing.", "Press up until your arms are extended, without locking out hard.", "Lower with control back to the start position."],
-    mistakes: ["Arching your lower back excessively", "Flaring elbows too wide", "Using momentum instead of controlled strength"],
-    alternatives: { easier: "Seated press with lighter weight", harder: "Standing overhead press", noEquipment: "Pike push-up" },
-  },
-  pull: {
-    category: "Compound · Upper Body Pull",
-    primary: ["Back", "Lats"],
-    secondary: ["Biceps", "Rear Shoulders"],
-    benefits: ["Builds a stronger back", "Improves posture", "Balances out pushing exercises"],
-    steps: ["Set up with a stable grip and braced core.", "Initiate the pull by drawing your shoulder blades together.", "Pull through until your elbows pass your torso.", "Control the return to a full stretch."],
-    mistakes: ["Using momentum or swinging", "Shrugging shoulders up toward your ears", "Only using your arms instead of your back"],
-    alternatives: { easier: "Band-assisted row", harder: "Weighted row or pull-up", noEquipment: "Towel row against a table edge" },
-  },
-  push: {
-    category: "Compound · Upper Body Push",
-    primary: ["Chest", "Shoulders"],
-    secondary: ["Triceps", "Core"],
-    benefits: ["Builds functional pushing strength", "No equipment needed", "Strengthens your core to keep your body straight"],
-    steps: ["Hands slightly wider than shoulders, body in a straight line.", "Lower your chest toward the floor with control.", "Keep your elbows at roughly a 45° angle from your body.", "Press back up to the start position."],
-    mistakes: ["Letting your hips sag", "Flaring elbows out to 90°", "Not going through a full range of motion"],
-    alternatives: { easier: "Incline push-up on a bench or step", harder: "Deficit or weighted push-up", noEquipment: "Already bodyweight — try knee push-ups to regress" },
-  },
-  hinge: {
-    category: "Compound · Posterior Chain",
-    primary: ["Hamstrings", "Glutes"],
-    secondary: ["Lower Back", "Core"],
-    benefits: ["Strengthens your posterior chain", "Improves hip hinge mechanics for daily life", "Reduces lower-back injury risk when done with good form"],
-    steps: ["Stand tall holding the weight in front of your thighs.", "Push your hips back while keeping a flat back.", "Lower until you feel a stretch in your hamstrings.", "Drive your hips forward to return to standing."],
-    mistakes: ["Rounding your back", "Bending the knees too much (turning it into a squat)", "Letting the weight drift away from your body"],
-    alternatives: { easier: "Single-dumbbell Romanian deadlift", harder: "Barbell deadlift", noEquipment: "Bodyweight good morning" },
-  },
-  lunge: {
-    category: "Compound · Lower Body",
-    primary: ["Quads", "Glutes"],
-    secondary: ["Core", "Balance"],
-    benefits: ["Builds single-leg strength and balance", "Corrects side-to-side strength imbalances", "Carries over to walking and running mechanics"],
-    steps: ["Step forward into a controlled stride.", "Lower until both knees are around 90°.", "Keep your front knee tracking over your foot, not caving in.", "Push back through your front heel to return to standing."],
-    mistakes: ["Letting the front knee cave inward", "Taking a stride that's too short", "Leaning too far forward"],
-    alternatives: { easier: "Stationary split squat, holding support", harder: "Walking lunge with added weight", noEquipment: "Bodyweight reverse lunge" },
-  },
-  core: {
-    category: "Isolation · Core",
-    primary: ["Abs", "Obliques"],
-    secondary: ["Hip Flexors", "Lower Back"],
-    benefits: ["Builds core stability", "Supports better posture", "Protects your spine during other lifts"],
-    steps: ["Set up in a stable, controlled starting position.", "Engage your core before moving.", "Move slowly and with control — avoid rushing reps.", "Keep breathing steadily throughout."],
-    mistakes: ["Holding your breath", "Using momentum instead of control", "Letting your lower back arch off the floor"],
-    alternatives: { easier: "Shorter hold or fewer reps", harder: "Add a slow tempo or extra hold", noEquipment: "Already bodyweight" },
-  },
-  curl: {
-    category: "Isolation · Arms",
-    primary: ["Biceps"],
-    secondary: ["Forearms"],
-    benefits: ["Builds arm strength and size", "Simple, low-injury-risk movement", "Great for tracking visible progress"],
-    steps: ["Stand tall, arms fully extended, weights at your sides.", "Curl the weight up without swinging your torso.", "Squeeze at the top briefly.", "Lower slowly back to the start."],
-    mistakes: ["Swinging your body to generate momentum", "Only doing half the range of motion", "Moving too fast"],
-    alternatives: { easier: "Lighter weight or fewer reps", harder: "Slower tempo or heavier weight", noEquipment: "Resistance band curl" },
-  },
-  triceps: {
-    category: "Isolation · Arms",
-    primary: ["Triceps"],
-    secondary: [],
-    benefits: ["Builds arm definition", "Complements pressing strength", "Quick to add to any upper-body day"],
-    steps: ["Set up with elbows tucked close to your body.", "Extend your arms fully without flaring your elbows out.", "Squeeze your triceps at full extension.", "Return with control."],
-    mistakes: ["Letting elbows drift outward", "Using your shoulders instead of your triceps", "Rushing the movement"],
-    alternatives: { easier: "Lighter weight, focus on form", harder: "Slower eccentric (lowering) phase", noEquipment: "Bodyweight dips on a chair" },
-  },
-  cardio: {
-    category: "Cardio · Full Body",
-    primary: ["Heart & Lungs"],
-    secondary: ["Full Body"],
-    benefits: ["Raises your heart rate efficiently", "Burns calories in a short amount of time", "No equipment required"],
-    steps: ["Keep a steady, sustainable pace rather than sprinting the first few seconds.", "Land softly to protect your joints.", "Breathe rhythmically throughout.", "Slow down if your form starts to break down."],
-    mistakes: ["Going too hard too fast and burning out", "Landing heavily instead of softly", "Holding your breath"],
-    alternatives: { easier: "Slower pace or a low-impact variation", harder: "Add a jump or increase your pace", noEquipment: "Already bodyweight" },
-  },
-  mobility: {
-    category: "Mobility · Recovery",
-    primary: ["Targeted muscle group"],
-    secondary: ["Connective tissue"],
-    benefits: ["Improves flexibility and range of motion", "Helps your body recover between workouts", "Can reduce muscle tightness and soreness"],
-    steps: ["Ease into the position gently — never force it.", "Breathe slowly and deeply throughout.", "Hold at a point of mild tension, not pain.", "Release slowly and switch sides if needed."],
-    mistakes: ["Bouncing instead of holding steady", "Forcing a deeper stretch than feels comfortable", "Holding your breath"],
-    alternatives: { easier: "Shorter hold, smaller range of motion", harder: "Deepen the stretch slightly or hold longer", noEquipment: "Already equipment-free" },
-  },
-  raise: {
-    category: "Isolation · Shoulders",
-    primary: ["Shoulders"],
-    secondary: ["Upper Back"],
-    benefits: ["Builds shoulder definition", "Improves shoulder stability", "Low-impact and joint-friendly"],
-    steps: ["Start with weights at your sides, slight bend in the elbows.", "Raise your arms out to the sides to shoulder height.", "Pause briefly at the top.", "Lower with control."],
-    mistakes: ["Using momentum to swing the weights up", "Raising above shoulder height", "Shrugging your shoulders up"],
-    alternatives: { easier: "Lighter weight", harder: "Slower tempo, pause at the top", noEquipment: "Resistance band lateral raise" },
-  },
-  calf: {
-    category: "Isolation · Lower Body",
-    primary: ["Calves"],
-    secondary: [],
-    benefits: ["Builds lower-leg strength", "Supports ankle stability", "Quick and easy to add to any leg day"],
-    steps: ["Stand tall, weight balanced evenly.", "Rise up onto your toes as high as comfortable.", "Pause briefly at the top.", "Lower slowly back down."],
-    mistakes: ["Rushing through reps", "Not going through a full range of motion", "Using momentum to bounce up"],
-    alternatives: { easier: "Fewer reps or seated variation", harder: "Single-leg calf raise", noEquipment: "Already bodyweight" },
-  },
-  default: {
-    category: "Full Body",
-    primary: ["Multiple muscle groups"],
-    secondary: ["Core"],
-    benefits: ["Supports your overall training goal", "Builds strength and coordination", "Fits well into a balanced routine"],
-    steps: ["Set up in a stable, controlled position.", "Move through the exercise with control.", "Keep your core engaged throughout.", "Return to the start position with control."],
-    mistakes: ["Rushing through reps", "Losing core tension", "Using momentum instead of muscle control"],
-    alternatives: { easier: "Reduce weight, reps, or range of motion", harder: "Increase weight, reps, or slow the tempo", noEquipment: "Try a bodyweight variation" },
-  },
-};
 
-function detectFamily(name) {
-  const n = name.toLowerCase();
-  if (n.includes("squat")) return "squat";
-  if (n.includes("press")) return "press";
-  if (n.includes("row") || n.includes("pulldown") || n.includes("pull-up") || n.includes("pull up")) return "pull";
-  if (n.includes("push-up") || n.includes("push up") || n.includes("dip")) return "push";
-  if (n.includes("deadlift") || n.includes("hinge")) return "hinge";
-  if (n.includes("lunge")) return "lunge";
-  if (n.includes("plank") || n.includes("crunch") || n.includes("dead bug") || n.includes("bird dog")) return "core";
-  if (n.includes("curl") && !n.includes("kickback")) return "curl";
-  if (n.includes("kickback") || n.includes("tricep")) return "triceps";
-  if (n.includes("raise")) return "raise";
-  if (n.includes("calf")) return "calf";
-  if (n.includes("jack") || n.includes("mountain climber") || n.includes("burpee") || n.includes("high knee")) return "cardio";
-  if (
-    n.includes("stretch") || n.includes("pose") || n.includes("roll") || n.includes("breathing") ||
-    n.includes("twist") || n.includes("fold") || n.includes("bridge") || n.includes("child") ||
-    n.includes("cobra") || n.includes("pigeon") || n.includes("butterfly") || n.includes("cat-cow") ||
-    n.includes("hydrant") || n.includes("donkey") || n.includes("walking recovery")
-  )
-    return "mobility";
-  return "default";
-}
 
-function buildExerciseDetail(ex) {
-  const family = EXERCISE_FAMILIES[detectFamily(ex.name)] || EXERCISE_FAMILIES.default;
-  return { ...family, coachTip: ex.tip, name: ex.name, detail: ex.detail };
-}
 
-function parseSetsReps(detail) {
-  if (!detail) return null;
-  const m = detail.match(/(\d+)\s*sets?\s*x\s*(\d+)\s*([a-z ]+)/i);
-  if (!m) return null;
-  const unit = /rep/i.test(m[3]) ? "reps" : "seconds";
-  return { sets: parseInt(m[1]), amount: parseInt(m[2]), unit };
-}
 
-function parseDurationSeconds(detail) {
-  if (!detail) return 45;
-  const mMin = detail.match(/(\d+)\s*minute/i);
-  if (mMin) return parseInt(mMin[1]) * 60;
-  const mSec = detail.match(/(\d+)\s*second/i);
-  if (mSec) return parseInt(mSec[1]);
-  return 45;
-}
 
-const STORAGE_KEY = "fitsync_data_v1";
+// Per-exercise media architecture. Each entry can define its own demo clip,
+// a longer how-to video, a thumbnail, and a duration label — independent of
+// every other exercise. Real videoUrl/thumbnail values are intentionally left
+// unset until licensed or self-recorded footage exists; the UI already knows
+// how to render whichever ones are present versus falling back to a
+// "coming soon" placeholder, so adding real media later is a data-only change.
 
-function loadSaved() {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch (e) {
-    return {};
-  }
-}
 
-function scoreWorkout(w, profile) {
-  let score = 0;
-  if (profile.goal && w.goal === profile.goal) score += 2;
-  if (profile.experience && w.difficulty === profile.experience) score += 1;
-  if (profile.equipment && w.equipment === profile.equipment) score += 1;
-  return score;
-}
 
-function Ring({ percent, size = 108, stroke = 10 }) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const clamped = Math.min(Math.max(percent, 0), 100);
-  return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={theme.surfaceAlt} strokeWidth={stroke} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke={theme.lime}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={c}
-        strokeDashoffset={c - (clamped / 100) * c}
-        style={{ transition: "stroke-dashoffset 0.6s ease" }}
-      />
-    </svg>
-  );
-}
 
-function GradientRing({ percent, size = 168, stroke = 14, gradFrom, gradTo, id }) {
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const clamped = Math.min(Math.max(percent, 0), 100);
-  const gradId = `grad-${id}`;
-  return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)", filter: `drop-shadow(0 0 18px ${gradTo}66)` }}>
-      <defs>
-        <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={gradFrom} />
-          <stop offset="100%" stopColor={gradTo} />
-        </linearGradient>
-      </defs>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={theme.surfaceAlt} strokeWidth={stroke} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke={`url(#${gradId})`}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={c}
-        strokeDashoffset={c - (clamped / 100) * c}
-        style={{ transition: "stroke-dashoffset 0.8s ease" }}
-      />
-    </svg>
-  );
-}
 
-function MacroBar({ label, consumed, target, color }) {
-  const pct = Math.min((consumed / target) * 100, 100);
-  return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 11, letterSpacing: 1, color: theme.muted, textTransform: "uppercase" }}>
-          {label}
-        </span>
-        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: theme.text }}>
-          {Math.round(consumed)}
-          <span style={{ color: theme.muted }}>/{target}g</span>
-        </span>
-      </div>
-      <div style={{ height: 6, borderRadius: 4, background: theme.surfaceAlt, overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4, transition: "width 0.5s ease" }} />
-      </div>
-    </div>
-  );
-}
 
-function StatPill({ icon, value, target, label }) {
-  return (
-    <div
-      style={{
-        flex: 1,
-        background: theme.surface,
-        border: `1px solid ${theme.border}`,
-        borderRadius: 12,
-        padding: "10px 8px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-      }}
-    >
-      {icon}
-      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: theme.text }}>
-        {value}
-        {target ? <span style={{ color: theme.muted }}>/{target}</span> : null}
-      </span>
-      <span style={{ fontFamily: "Inter, sans-serif", fontSize: 9, letterSpacing: 1, color: theme.muted, textTransform: "uppercase" }}>
-        {label}
-      </span>
-    </div>
-  );
-}
 
-function ScreenHeader({ title, subtitle }) {
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 600, color: theme.text }}>{title}</div>
-      {subtitle && <div style={{ fontSize: 12, color: theme.muted, marginTop: 2 }}>{subtitle}</div>}
-    </div>
-  );
-}
 
-function Chip({ label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: "10px 14px",
-        borderRadius: 10,
-        fontSize: 13,
-        border: `1px solid ${active ? theme.lime : theme.border}`,
-        background: active ? "rgba(201,240,101,0.1)" : theme.surface,
-        color: active ? theme.lime : theme.text,
-        textAlign: "left",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
 
-const POSES = {
-  standing: { head: { cx: 50, cy: 20, r: 8 }, lines: [[50,28,50,60],[50,35,30,50],[50,35,70,50],[50,60,35,90],[50,60,65,90]] },
-  squat: { head: { cx: 50, cy: 25, r: 8 }, lines: [[50,33,50,58],[50,38,25,38],[50,38,75,38],[50,58,30,68],[30,68,25,90],[50,58,70,68],[70,68,75,90]] },
-  press: { head: { cx: 50, cy: 25, r: 8 }, lines: [[50,33,50,65],[50,38,30,15],[50,38,70,15],[50,65,38,90],[50,65,62,90]] },
-  raise: { head: { cx: 50, cy: 22, r: 8 }, lines: [[50,30,50,60],[50,35,20,35],[50,35,80,35],[50,60,38,90],[50,60,62,90]] },
-  pull: { head: { cx: 45, cy: 30, r: 8 }, lines: [[45,38,60,60],[50,45,30,50],[55,50,35,55],[60,60,50,90],[60,60,70,90]] },
-  push: { head: { cx: 20, cy: 50, r: 7 }, lines: [[27,50,90,50],[35,50,35,70],[55,50,55,70]] },
-  lunge: { head: { cx: 50, cy: 22, r: 8 }, lines: [[50,30,55,58],[50,35,35,45],[55,35,70,30],[55,58,40,70],[40,70,40,90],[55,58,75,75],[75,75,85,90]] },
-  hinge: { head: { cx: 40, cy: 30, r: 8 }, lines: [[40,38,65,55],[45,42,40,65],[50,45,45,68],[65,55,55,90],[65,55,75,90]] },
-  curl: { head: { cx: 50, cy: 22, r: 8 }, lines: [[50,30,50,60],[50,35,65,40],[65,40,60,25],[50,35,35,50],[50,60,38,90],[50,60,62,90]] },
-  cardio: { head: { cx: 45, cy: 20, r: 8 }, lines: [[45,28,55,55],[50,32,65,25],[50,35,35,45],[55,55,40,60],[40,60,35,45],[55,55,70,80],[70,80,80,90]] },
-  mobility: { head: { cx: 30, cy: 55, r: 7 }, lines: [[35,60,55,75],[35,62,15,68],[40,65,20,72],[55,75,85,78]] },
-};
 
-function PoseIcon({ family, color, size = 44 }) {
-  const poseKey =
-    family === "squat" || family === "calf" ? "squat" :
-    family === "press" ? "press" :
-    family === "raise" ? "raise" :
-    family === "pull" ? "pull" :
-    family === "push" || family === "core" ? "push" :
-    family === "lunge" ? "lunge" :
-    family === "hinge" ? "hinge" :
-    family === "curl" || family === "triceps" ? "curl" :
-    family === "cardio" ? "cardio" :
-    family === "mobility" ? "mobility" :
-    "standing";
-  const pose = POSES[poseKey];
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <circle cx={pose.head.cx} cy={pose.head.cy} r={pose.head.r} stroke={color} strokeWidth={5} />
-      {pose.lines.map((l, i) => (
-        <line key={i} x1={l[0]} y1={l[1]} x2={l[2]} y2={l[3]} stroke={color} strokeWidth={5} strokeLinecap="round" />
-      ))}
-    </svg>
-  );
-}
 
-function WorkoutCard({ w, onStart, recommended, isFavorite, onToggleFavorite }) {
-  const Icon = w.type === "Recovery" ? Leaf : Dumbbell;
-  return (
-    <div
-      style={{
-        background: theme.surface,
-        border: `1px solid ${recommended ? theme.lime : theme.border}`,
-        borderRadius: 12,
-        padding: "12px 14px",
-        marginBottom: 10,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 8, background: theme.surfaceAlt, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Icon size={16} color={theme.lime} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, color: theme.text, fontWeight: 500 }}>{w.name}</div>
-          <div style={{ fontSize: 11, color: theme.muted }}>{w.type} · {w.exercises} exercises · {w.duration} min</div>
-        </div>
-        <button onClick={onToggleFavorite} style={{ background: "none", border: "none", padding: 4, flexShrink: 0 }}>
-          <Heart size={15} color={isFavorite ? theme.coral : theme.muted} fill={isFavorite ? theme.coral : "none"} />
-        </button>
-        <button
-          onClick={onStart}
-          style={{ display: "flex", alignItems: "center", gap: 4, background: theme.lime, color: "#12211D", border: "none", borderRadius: 8, padding: "7px 10px", fontSize: 11, fontWeight: 600, flexShrink: 0 }}
-        >
-          <Play size={12} /> START
-        </button>
-      </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {[w.difficulty, w.equipment, w.goal].map((tag) => (
-          <span key={tag} style={{ fontSize: 9.5, color: theme.muted, background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 6, padding: "3px 7px" }}>
-            {tag}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
+
+
+
+
 
 export default function FitSyncPrototype() {
   const saved = useMemo(() => loadSaved(), []);
   const [onboarded, setOnboarded] = useState(saved.onboarded ?? false);
   const [onboardStep, setOnboardStep] = useState(1);
-  const [profile, setProfile] = useState(saved.profile ?? { name: "", age: "", height: "", startWeight: "", goal: null, experience: null, equipment: null, cycleAware: false, cycleStartDate: "", cycleLength: 28 });
+  const [profile, setProfile] = useState(saved.profile ?? { name: "", age: "", height: "", startWeight: "", goal: null, experience: null, equipment: null, trainingLocations: [], equipmentDetailed: [], cycleAware: false, cycleStartDate: "", cycleLength: 28 });
   const [targets, setTargets] = useState(saved.targets ?? DEFAULT_TARGETS);
   const [unitsPref, setUnitsPref] = useState(saved.unitsPref ?? "kg");
   const [favorites, setFavorites] = useState(saved.favorites ?? { foods: [], workouts: [] });
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsToast, setSettingsToast] = useState(null);
+  const [prefsDraft, setPrefsDraft] = useState(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showPlanner, setShowPlanner] = useState(false);
   const [weekPlan, setWeekPlan] = useState(saved.weekPlan ?? { Mon: null, Tue: null, Wed: null, Thu: null, Fri: null, Sat: null, Sun: null });
@@ -744,6 +158,11 @@ export default function FitSyncPrototype() {
   const [measurementError, setMeasurementError] = useState("");
   const [xpToast, setXpToast] = useState(null);
   const [activeSession, setActiveSession] = useState(null);
+  const [sessionStats, setSessionStats] = useState({ startTime: null, setsCompleted: 0, prsThisSession: 0 });
+  const [showVideoSection, setShowVideoSection] = useState(false);
+  const [showSwapMenu, setShowSwapMenu] = useState(false);
+  const [showWorkoutComplete, setShowWorkoutComplete] = useState(false);
+  const [completedSummary, setCompletedSummary] = useState(null);
   const [currentSets, setCurrentSets] = useState(null);
   const [timer, setTimer] = useState(null);
   const [timerLabel, setTimerLabel] = useState("");
@@ -925,6 +344,9 @@ export default function FitSyncPrototype() {
   function openSession(workout) {
     const list = workout.exerciseList || (workout.exercises && Array.isArray(workout.exercises) ? workout.exercises.map((e) => ({ name: e, detail: "", tip: "Focus on slow, controlled form." })) : []);
     setActiveSession({ workout, list, index: 0 });
+    setSessionStats({ startTime: Date.now(), setsCompleted: 0, prsThisSession: 0 });
+    setShowVideoSection(false);
+    setShowSwapMenu(false);
   }
 
   function nextExercise() {
@@ -933,21 +355,44 @@ export default function FitSyncPrototype() {
       if (s.index < s.list.length - 1) return { ...s, index: s.index + 1 };
       return s;
     });
+    setShowVideoSection(false);
+    setShowSwapMenu(false);
   }
 
   function prevExercise() {
     setActiveSession((s) => (s && s.index > 0 ? { ...s, index: s.index - 1 } : s));
+    setShowVideoSection(false);
+    setShowSwapMenu(false);
+  }
+
+  function swapExercise(newName) {
+    setActiveSession((s) => {
+      if (!s) return s;
+      const list = [...s.list];
+      list[s.index] = { ...list[s.index], name: newName };
+      return { ...s, list };
+    });
+    setShowSwapMenu(false);
   }
 
   function finishSession() {
     if (!activeSession) return;
+    const durationMs = Date.now() - (sessionStats.startTime || Date.now());
+    const durationMin = Math.max(1, Math.round(durationMs / 60000));
+    setCompletedSummary({
+      workoutName: activeSession.workout.name,
+      durationMin,
+      exercisesCount: activeSession.list.length,
+      setsCompleted: sessionStats.setsCompleted,
+      xpEarned: 30 + sessionStats.setsCompleted * 5 + sessionStats.prsThisSession * 20,
+      prsThisSession: sessionStats.prsThisSession,
+    });
     setWorkoutDone(true);
-    setWorkoutFeedback(activeSession.workout.name);
-    setTimeout(() => setWorkoutFeedback(null), 2500);
     awardXp(30, "workout_completed");
     setLastWorkoutType(activeSession.workout.type);
     addTimelineEvent(Dumbbell, `Completed ${activeSession.workout.name}`, "workout");
     setActiveSession(null);
+    setShowWorkoutComplete(true);
   }
 
   function updateSet(i, field, delta) {
@@ -968,6 +413,7 @@ export default function FitSyncPrototype() {
       return next;
     });
     awardXp(5, "set_completed");
+    setSessionStats((s) => ({ ...s, setsCompleted: s.setsCompleted + 1 }));
     if (i < currentSets.length - 1) {
       setTimer(60);
       setTimerLabel("Rest");
@@ -986,6 +432,7 @@ export default function FitSyncPrototype() {
         setTimeout(() => setRecordToast(null), 2200);
         awardXp(20, "pr");
         setPrCount((p) => p + 1);
+        setSessionStats((s) => ({ ...s, prsThisSession: s.prsThisSession + 1 }));
         addTimelineEvent(Award, `New PR: ${name} — ${set.weight}kg × ${set.reps}`, "pr");
       }
     }
@@ -1092,6 +539,38 @@ export default function FitSyncPrototype() {
       ...prev,
       workouts: prev.workouts.includes(id) ? prev.workouts.filter((x) => x !== id) : [...prev.workouts, id],
     }));
+  }
+
+  function openPreferencesEditor() {
+    setPrefsDraft({
+      experience: profile.experience,
+      goal: profile.goal,
+      trainingLocations: profile.trainingLocations || [],
+      equipmentDetailed: profile.equipmentDetailed || [],
+    });
+  }
+
+  function toggleDraftMulti(field, value) {
+    setPrefsDraft((d) => ({
+      ...d,
+      [field]: d[field].includes(value) ? d[field].filter((v) => v !== value) : [...d[field], value],
+    }));
+  }
+
+  function savePreferences() {
+    if (!prefsDraft) return;
+    const derivedEquipment = deriveEquipmentTag(prefsDraft.equipmentDetailed) || profile.equipment;
+    setProfile((p) => ({
+      ...p,
+      experience: prefsDraft.experience,
+      goal: prefsDraft.goal,
+      trainingLocations: prefsDraft.trainingLocations,
+      equipmentDetailed: prefsDraft.equipmentDetailed,
+      equipment: derivedEquipment,
+    }));
+    setPrefsDraft(null);
+    setSettingsToast("Fitness preferences updated");
+    setTimeout(() => setSettingsToast(null), 2200);
   }
 
   function exportData() {
@@ -2716,6 +2195,7 @@ export default function FitSyncPrototype() {
         {activeSession && (() => {
           const ex = activeSession.list[activeSession.index];
           const detail = buildExerciseDetail(ex);
+          const media = getExerciseMedia(ex.name);
           const isLast = activeSession.index === activeSession.list.length - 1;
           const prevRecord = exerciseHistory[ex.name];
           return (
@@ -2740,9 +2220,35 @@ export default function FitSyncPrototype() {
                   <div style={{ width: 68, height: 68, borderRadius: 14, background: theme.surface, border: `1px solid ${theme.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <PoseIcon family={detectFamily(ex.name)} color={theme.lime} size={44} />
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 19, fontWeight: 700, color: theme.text, lineHeight: 1.2, marginBottom: 3 }}>{ex.name}</div>
                     <div style={{ fontSize: 11, color: theme.muted }}>{detail.category}</div>
+                  </div>
+                  <div style={{ position: "relative" }}>
+                    <button
+                      onClick={() => setShowSwapMenu((s) => !s)}
+                      style={{ display: "flex", alignItems: "center", gap: 4, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "6px 10px", fontSize: 10.5, color: theme.muted }}
+                    >
+                      Swap
+                    </button>
+                    {showSwapMenu && (
+                      <div style={{ position: "absolute", top: 32, right: 0, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: 6, width: 190, boxShadow: "0 10px 24px rgba(0,0,0,0.5)", zIndex: 5 }}>
+                        {[
+                          ["Easier", detail.alternatives.easier],
+                          ["Harder", detail.alternatives.harder],
+                          ["No equipment", detail.alternatives.noEquipment],
+                        ].map(([label, altName]) => (
+                          <button
+                            key={label}
+                            onClick={() => swapExercise(altName)}
+                            style={{ display: "block", width: "100%", textAlign: "left", background: "none", border: "none", padding: "8px 8px", borderRadius: 6, fontSize: 11.5, color: theme.text }}
+                          >
+                            <span style={{ color: theme.muted, fontSize: 9.5, display: "block", textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</span>
+                            {altName}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -2753,6 +2259,30 @@ export default function FitSyncPrototype() {
                   {detail.secondary.map((m) => (
                     <span key={m} style={{ fontSize: 10, color: theme.muted, background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 6, padding: "3px 8px" }}>{m}</span>
                   ))}
+                </div>
+
+                <div style={{ marginBottom: 14 }}>
+                  <button
+                    onClick={() => setShowVideoSection((s) => !s)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px" }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: theme.text, fontWeight: 500 }}>
+                      <Play size={13} color={theme.lime} /> Demonstration video
+                    </span>
+                    <ChevronRight size={14} color={theme.muted} style={{ transform: showVideoSection ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
+                  </button>
+                  {showVideoSection && (
+                    <div style={{ marginTop: 8 }}>
+                      {media.videoUrl ? (
+                        <video src={media.videoUrl} poster={media.thumbnail || undefined} controls loop style={{ width: "100%", borderRadius: 10, background: "#000" }} />
+                      ) : (
+                        <div style={{ background: theme.surfaceAlt, border: `1px dashed ${theme.border}`, borderRadius: 10, padding: "26px 14px", textAlign: "center" }}>
+                          <Play size={20} color={theme.muted} style={{ marginBottom: 8 }} />
+                          <div style={{ fontSize: 12, color: theme.muted }}>Video guide coming soon</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {ex.detail && (
@@ -2989,6 +2519,87 @@ export default function FitSyncPrototype() {
                 ))}
               </div>
 
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase" }}>Fitness Preferences</span>
+                {!prefsDraft && (
+                  <button onClick={openPreferencesEditor} style={{ fontSize: 11, color: theme.lime, background: "none", border: "none", fontWeight: 600 }}>
+                    Edit
+                  </button>
+                )}
+              </div>
+
+              {!prefsDraft ? (
+                <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 20, fontSize: 12, color: theme.muted, lineHeight: 1.7 }}>
+                  <div><strong style={{ color: theme.text }}>Experience:</strong> {profile.experience || "Not set"}</div>
+                  <div><strong style={{ color: theme.text }}>Goal:</strong> {profile.goal || "Not set"}</div>
+                  <div><strong style={{ color: theme.text }}>Locations:</strong> {(profile.trainingLocations || []).join(", ") || "Not set"}</div>
+                  <div><strong style={{ color: theme.text }}>Equipment:</strong> {(profile.equipmentDetailed || []).join(", ") || "Not set"}</div>
+                </div>
+              ) : (
+                <div style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 12, padding: "14px", marginBottom: 20 }}>
+                  <div style={{ fontSize: 9.5, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>Experience Level</div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+                    {EXPERIENCE_LEVELS.map((e) => (
+                      <button
+                        key={e}
+                        onClick={() => setPrefsDraft((d) => ({ ...d, experience: e }))}
+                        style={{ flex: 1, padding: "8px 0", borderRadius: 8, fontSize: 11, border: `1px solid ${prefsDraft.experience === e ? theme.lime : theme.border}`, background: prefsDraft.experience === e ? "rgba(201,240,101,0.08)" : "transparent", color: prefsDraft.experience === e ? theme.lime : theme.muted }}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: 9.5, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>Training Locations</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+                    {TRAINING_LOCATIONS.map((loc) => (
+                      <button
+                        key={loc}
+                        onClick={() => toggleDraftMulti("trainingLocations", loc)}
+                        style={{ padding: "7px 12px", borderRadius: 8, fontSize: 11, border: `1px solid ${prefsDraft.trainingLocations.includes(loc) ? theme.sky : theme.border}`, background: prefsDraft.trainingLocations.includes(loc) ? "rgba(126,200,227,0.1)" : "transparent", color: prefsDraft.trainingLocations.includes(loc) ? theme.sky : theme.muted }}
+                      >
+                        {loc}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: 9.5, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>Available Equipment</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+                    {DETAILED_EQUIPMENT.map((eq) => (
+                      <button
+                        key={eq}
+                        onClick={() => toggleDraftMulti("equipmentDetailed", eq)}
+                        style={{ padding: "7px 12px", borderRadius: 8, fontSize: 11, border: `1px solid ${prefsDraft.equipmentDetailed.includes(eq) ? theme.lime : theme.border}`, background: prefsDraft.equipmentDetailed.includes(eq) ? "rgba(201,240,101,0.08)" : "transparent", color: prefsDraft.equipmentDetailed.includes(eq) ? theme.lime : theme.muted }}
+                      >
+                        {eq}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: 9.5, color: theme.muted, textTransform: "uppercase", marginBottom: 6 }}>Fitness Goal</div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+                    {GOALS.map((g) => (
+                      <button
+                        key={g}
+                        onClick={() => setPrefsDraft((d) => ({ ...d, goal: g }))}
+                        style={{ padding: "7px 12px", borderRadius: 8, fontSize: 11, border: `1px solid ${prefsDraft.goal === g ? theme.lime : theme.border}`, background: prefsDraft.goal === g ? "rgba(201,240,101,0.08)" : "transparent", color: prefsDraft.goal === g ? theme.lime : theme.muted }}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setPrefsDraft(null)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: `1px solid ${theme.border}`, background: "transparent", color: theme.muted, fontSize: 12 }}>
+                      Cancel
+                    </button>
+                    <button onClick={savePreferences} style={{ flex: 2, padding: "10px 0", borderRadius: 8, border: "none", background: theme.lime, color: "#12211D", fontSize: 12, fontWeight: 600 }}>
+                      Save Preferences
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div style={{ fontSize: 10, letterSpacing: 1.5, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Nutrition Targets</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
                 {[
@@ -3211,161 +2822,6 @@ export default function FitSyncPrototype() {
           </button>
         </div>
 
-        {showSettings && (
-          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Settings</span>
-              <button onClick={() => setShowSettings(false)} style={{ background: "none", border: "none", padding: 4 }}>
-                <X size={18} color={theme.muted} />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Profile</div>
-              <input
-                value={profile.name}
-                onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Name"
-                style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", color: theme.text, fontSize: 13, marginBottom: 8, outline: "none" }}
-              />
-              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                <input type="number" value={profile.age} onChange={(e) => setProfile((p) => ({ ...p, age: e.target.value }))} placeholder="Age" style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", color: theme.text, fontSize: 13, outline: "none" }} />
-                <input type="number" value={profile.height} onChange={(e) => setProfile((p) => ({ ...p, height: e.target.value }))} placeholder="Height (cm)" style={{ flex: 1, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", color: theme.text, fontSize: 13, outline: "none" }} />
-              </div>
-
-              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Units</div>
-              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                {["kg", "lb"].map((u) => (
-                  <button key={u} onClick={() => setUnitsPref(u)} style={{ flex: 1, padding: "9px 0", borderRadius: 8, fontSize: 12, border: `1px solid ${unitsPref === u ? theme.lime : theme.border}`, background: unitsPref === u ? "rgba(201,240,101,0.08)" : "transparent", color: unitsPref === u ? theme.lime : theme.muted }}>
-                    {u === "kg" ? "Kilograms" : "Pounds"}
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Nutrition targets</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
-                {[
-                  ["kcal", "Calories"],
-                  ["protein", "Protein (g)"],
-                  ["carbs", "Carbs (g)"],
-                  ["fat", "Fat (g)"],
-                ].map(([field, label]) => (
-                  <div key={field}>
-                    <div style={{ fontSize: 9, color: theme.muted, marginBottom: 4 }}>{label}</div>
-                    <input
-                      type="number"
-                      value={targets[field]}
-                      onChange={(e) => setTargets((t) => ({ ...t, [field]: Number(e.target.value) || t[field] }))}
-                      style={{ width: "100%", background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "8px 10px", color: theme.text, fontSize: 12, outline: "none" }}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ fontSize: 10, letterSpacing: 1, color: theme.muted, textTransform: "uppercase", marginBottom: 8 }}>Data</div>
-              <button onClick={exportData} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px solid ${theme.border}`, color: theme.text, borderRadius: 10, padding: "11px 0", fontSize: 12.5, marginBottom: 8 }}>
-                Export my data
-              </button>
-              <button
-                onClick={() => { if (window.confirm("This clears everything and cannot be undone. Continue?")) resetAllData(); }}
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", background: "transparent", border: `1px solid ${theme.coral}`, color: theme.coral, borderRadius: 10, padding: "11px 0", fontSize: 12.5 }}
-              >
-                Reset all data
-              </button>
-              <div style={{ fontSize: 10.5, color: theme.muted, marginTop: 20, lineHeight: 1.5, textAlign: "center" }}>
-                No account system yet — your data lives in this browser only. Setting up real accounts and cloud sync is the next big step.
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showWorkoutHistory && (
-          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Workout History</span>
-              <button onClick={() => setShowWorkoutHistory(false)} style={{ background: "none", border: "none", padding: 4 }}>
-                <X size={18} color={theme.muted} />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-              {timeline.filter((t) => t.type === "workout").length === 0 ? (
-                <div style={{ fontSize: 12, color: theme.muted, textAlign: "center", padding: "30px 0" }}>No completed workouts yet — start one from the Workout tab.</div>
-              ) : (
-                timeline.filter((t) => t.type === "workout").map((t) => (
-                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", marginBottom: 6 }}>
-                    <Dumbbell size={15} color={theme.lime} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12.5, color: theme.text }}>{t.text}</div>
-                      <div style={{ fontSize: 10, color: theme.muted }}>{t.time}</div>
-                    </div>
-                  </div>
-                ))
-              )}
-              <div style={{ fontSize: 10.5, color: theme.muted, marginTop: 12, textAlign: "center" }}>Per-set detail (weights, reps) isn't saved historically yet — only current personal bests.</div>
-            </div>
-          </div>
-        )}
-
-        {showNutritionHistory && (
-          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Nutrition History</span>
-              <button onClick={() => setShowNutritionHistory(false)} style={{ background: "none", border: "none", padding: 4 }}>
-                <X size={18} color={theme.muted} />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-              {nutritionByDay.map(([day, data]) => (
-                <div key={day} style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", marginBottom: 6 }}>
-                  <div style={{ fontSize: 12.5, color: theme.text, fontWeight: 500, marginBottom: 3 }}>{day}</div>
-                  <div style={{ fontSize: 11, color: theme.muted }}>{Math.round(data.kcal)} kcal · {Math.round(data.protein)}g protein · {data.entries} items logged</div>
-                </div>
-              ))}
-              <div style={{ fontSize: 10.5, color: theme.muted, marginTop: 12, textAlign: "center" }}>Only shows days since this feature was added — earlier demo entries aren't date-stamped.</div>
-            </div>
-          </div>
-        )}
-
-        {showPlanner && (
-          <div style={{ position: "absolute", inset: 0, background: theme.bg, zIndex: 30, display: "flex", flexDirection: "column" }}>
-            <div style={{ padding: "20px 20px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: theme.text }}>Weekly Plan</span>
-              <button onClick={() => setShowPlanner(false)} style={{ background: "none", border: "none", padding: 4 }}>
-                <X size={18} color={theme.muted} />
-              </button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-              {Object.keys(weekPlan).map((day) => {
-                const assigned = weekPlan[day] ? WORKOUT_LIBRARY.find((w) => w.id === weekPlan[day]) : null;
-                return (
-                  <div key={day} style={{ background: theme.surface, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "11px 14px", marginBottom: 6 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: assigned ? 6 : 0 }}>
-                      <span style={{ fontSize: 11, color: theme.muted, textTransform: "uppercase", letterSpacing: 1 }}>{day}</span>
-                      {assigned && (
-                        <button onClick={() => setWeekPlan((p) => ({ ...p, [day]: null }))} style={{ background: "none", border: "none" }}>
-                          <X size={13} color={theme.muted} />
-                        </button>
-                      )}
-                    </div>
-                    {assigned ? (
-                      <div style={{ fontSize: 13, color: theme.text }}>{assigned.name}</div>
-                    ) : (
-                      <select
-                        onChange={(e) => setWeekPlan((p) => ({ ...p, [day]: Number(e.target.value) }))}
-                        value=""
-                        style={{ width: "100%", background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 8, padding: "8px 10px", color: theme.muted, fontSize: 12, outline: "none" }}
-                      >
-                        <option value="" disabled>+ Add workout or leave as rest day</option>
-                        {WORKOUT_LIBRARY.map((w) => (
-                          <option key={w.id} value={w.id}>{w.name}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {achievementCelebration && (
           <div
@@ -3392,6 +2848,29 @@ export default function FitSyncPrototype() {
               <div style={{ fontSize: 10, letterSpacing: 1, color: theme.lime, textTransform: "uppercase", fontWeight: 600 }}>Achievement Unlocked</div>
               <div style={{ fontSize: 13, color: theme.text, fontWeight: 600 }}>{achievementCelebration.name} · +{achievementCelebration.xp} XP</div>
             </div>
+          </div>
+        )}
+
+        {settingsToast && (
+          <div
+            style={{
+              position: "absolute",
+              top: 70,
+              left: "50%",
+              transform: "translateX(-50%)",
+              background: theme.surface,
+              border: `1px solid ${theme.lime}`,
+              color: theme.text,
+              fontSize: 12.5,
+              fontWeight: 500,
+              padding: "8px 16px",
+              borderRadius: 20,
+              boxShadow: "0 6px 16px rgba(0,0,0,0.4)",
+              zIndex: 40,
+              whiteSpace: "nowrap",
+            }}
+          >
+            ✓ {settingsToast}
           </div>
         )}
 
